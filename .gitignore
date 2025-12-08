@@ -1,0 +1,5 @@
+# ignore artifcats, local secrets
+secrets/*
+*.swp
+*.swo
+*.pyc
