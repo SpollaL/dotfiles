@@ -21,6 +21,9 @@ sudo apt install -y polybar fonts-font-awesome fonts-materialdesignicons-webfont
 echo ">>> Installing Rofi..."
 sudo apt install -y rofi
 
+echo ">>> Installing feh..."
+sudo apt install -y feh
+
 echo ">>> Creating config dirs (if missing)..."
 mkdir -p ~/.config/i3
 mkdir -p ~/.config/polybar
