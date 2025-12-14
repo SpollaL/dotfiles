@@ -121,3 +121,6 @@ alias i3config='code ~/.config/i3/config'
 
 # Generated for envman. Do not edit.
 [ -s "$HOME/.config/envman/load.sh" ] && source "$HOME/.config/envman/load.sh"
+eval "$(zellij setup --generate-auto-start bash)"
+
+export PATH="$PATH:/opt/nvim/"

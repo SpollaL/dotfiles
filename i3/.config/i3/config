@@ -221,3 +221,6 @@ bindsym $mod+space exec --no-startup-id rofi -show combi
 # suspend
 bindsym $mod+Control+l exec --no-startup-id systemctl suspend
 bindsym $mod+Shift+s exec systemctl poweroff
+
+# Keyboard mappings
+exec --no-startup-id setxkbmap -option caps:escape
