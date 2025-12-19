@@ -1,41 +1,41 @@
 return {
-  {
-    "mason-org/mason.nvim",
-    config = function()
-      require('mason').setup()
-    end
-  },
-  {
-    "mason-org/mason-lspconfig.nvim",
-    opts = {
-        ensure_installed = { "lua_ls", "gopls" },
-    },
-    dependencies = {
-        { "mason-org/mason.nvim", opts = {} },
-        "neovim/nvim-lspconfig" },
-  },
-  {
-    "neovim/nvim-lspconfig",
-    config = function()
-        vim.api.nvim_create_autocmd('LspAttach', {
-        group = vim.api.nvim_create_augroup('UserLspConfig', {}),
-        callback = function(ev)
-          -- Enable completion triggered by <c-x><c-o>
-          vim.bo[ev.buf].omnifunc = 'v:lua.vim.lsp.omnifunc'
+	{
+		"mason-org/mason.nvim",
+		config = function()
+			require("mason").setup()
+		end,
+	},
+	{
+		"mason-org/mason-lspconfig.nvim",
+		opts = {
+			ensure_installed = { "lua_ls", "gopls" },
+		},
+		dependencies = {
+			{ "mason-org/mason.nvim", opts = {} },
+			"neovim/nvim-lspconfig",
+		},
+	},
+	{
+		"neovim/nvim-lspconfig",
+		config = function()
+			vim.api.nvim_create_autocmd("LspAttach", {
+				group = vim.api.nvim_create_augroup("UserLspConfig", {}),
+				callback = function(ev)
+					-- Enable completion triggered by <c-x><c-o>
+					vim.bo[ev.buf].omnifunc = "v:lua.vim.lsp.omnifunc"
 
-          -- Buffer local mappings.
-          -- See `:help vim.lsp.*` for documentation on any of the below functions
-          local opts = { buffer = ev.buf }
-          vim.keymap.set('n', 'gD', vim.lsp.buf.declaration, opts)
-          vim.keymap.set('n', 'gd', vim.lsp.buf.definition, opts)
-          vim.keymap.set('n', 'K', vim.lsp.buf.hover, opts)
-          vim.keymap.set('n', 'gi', vim.lsp.buf.implementation, opts)
-          vim.keymap.set('n', '<C-k>', vim.lsp.buf.signature_help, opts)
-          vim.keymap.set('n', '<space>rn', vim.lsp.buf.rename, opts)
-          vim.keymap.set({ 'n', 'v' }, '<leader>ca', vim.lsp.buf.code_action, opts)
-          vim.keymap.set('n', 'gr', vim.lsp.buf.references, opts)
-        end,
-      })
-    end
-  },
+					-- Buffer local mappings.
+					-- See `:help vim.lsp.*` for documentation on any of the below functions
+					vim.keymap.set("n", "gD", vim.lsp.buf.declaration, { desc = "Go to declaration" })
+					vim.keymap.set("n", "gd", vim.lsp.buf.definition, { desc = "Go to definition" })
+					vim.keymap.set("n", "gh", vim.lsp.buf.hover, { desc = "Show hover documentation" })
+					vim.keymap.set("n", "gi", vim.lsp.buf.implementation, { desc = "Go to implementation" })
+					vim.keymap.set("n", "<C-k>", vim.lsp.buf.signature_help, { desc = "Show signature help" })
+					vim.keymap.set("n", "<F2>", vim.lsp.buf.rename, { desc = "Rename symbol" })
+					vim.keymap.set({ "n", "v" }, "<leader>ca", vim.lsp.buf.code_action, { desc = "Code action" })
+					vim.keymap.set("n", "gr", vim.lsp.buf.references, { desc = "List references" })
+				end,
+			})
+		end,
+	},
 }

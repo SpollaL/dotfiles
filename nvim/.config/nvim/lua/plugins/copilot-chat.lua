@@ -3,6 +3,7 @@ return {
 		"CopilotC-Nvim/CopilotChat.nvim",
 		dependencies = {
 			{ "nvim-lua/plenary.nvim", branch = "master" },
+      {"folke/which-key.nvim"  },
 		},
 		build = "make tiktoken",
 		opts = {},
@@ -15,6 +16,10 @@ return {
 			vim.keymap.set("v", "<leader>cd", ":CopilotChatDocs<CR>", { desc = "Generate docs" })
 			vim.keymap.set("v", "<leader>ct", ":CopilotChatTests<CR>", { desc = "Generate tests" })
 			vim.keymap.set("n", "<leader>cm", ":CopilotChatCommit<CR>", { desc = "Generate commit message" })
+      local wk = require("which-key")
+      wk.add({
+        { "<leader>c", group = "Copilot" }, -- group
+      })
 		end,
 	},
 }
