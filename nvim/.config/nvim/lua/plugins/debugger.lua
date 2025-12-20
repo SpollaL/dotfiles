@@ -16,41 +16,27 @@ return {
     })
     require("dapui").setup()
     require("dap-go").setup()
-
-    local launch_attempted = false
-    local launch_successful = false
-
+    dap.configurations.go = {
+      {
+        type = "go",
+        name = "Debug Interactive CLI (scanner)",
+        request = "launch",
+        program = "${workspaceFolder}",
+        console = "externalTerminal",
+      },
+    }
     dap.listeners.before.attach.dapui_config = function()
       dapui.open()
     end
     dap.listeners.before.launch.dapui_config = function()
       dapui.open()
-      launch_attempted = true
-      launch_successful = false
-      -- Set a timer to check for launch failure
-      vim.defer_fn(function()
-        if launch_attempted and not launch_successful then
-          dapui.close()
-        end
-      end, 1000) -- 1 second delay
     end
-    dap.listeners.after.event_initialized.dapui_config = function()
-      launch_successful = true
-    end
-
     dap.listeners.before.event_terminated.dapui_config = function()
       dapui.close()
     end
     dap.listeners.before.event_exited.dapui_config = function()
       dapui.close()
     end
-    dap.listeners.before.event_stopped.dapui_config = function()
-      dapui.close()
-    end
-    dap.listeners.before.disconnect.dapui_config = function()
-      dapui.close()
-    end
-
     vim.keymap.set("n", "<Leader>dc", function()
       dap.continue()
     end, { desc = "DAP: Continue" })
@@ -66,6 +52,9 @@ return {
     vim.keymap.set("n", "<Leader>dt", function()
       dap.toggle_breakpoint()
     end, { desc = "DAP: Toggle Breakpoint" })
+    vim.keymap.set("n", "<Leader>ds", function()
+      dap.terminate()
+    end, { desc = "DAP: Stop Debugger" })
     local wk = require("which-key")
     wk.add({
       { "<leader>d", group = "Debugger" }, -- group
