@@ -16,15 +16,7 @@ return {
     })
     require("dapui").setup()
     require("dap-go").setup()
-    dap.configurations.go = {
-      {
-        type = "go",
-        name = "Debug Interactive CLI (scanner)",
-        request = "launch",
-        program = "${workspaceFolder}",
-        console = "externalTerminal",
-      },
-    }
+
     dap.listeners.before.attach.dapui_config = function()
       dapui.open()
     end
@@ -39,6 +31,7 @@ return {
     end
     vim.keymap.set("n", "<Leader>dc", function()
       dap.continue()
+      vim.cmd.Neotree("close")
     end, { desc = "DAP: Continue" })
     vim.keymap.set("n", "<Leader>do", function()
       dap.step_over()
