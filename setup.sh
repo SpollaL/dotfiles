@@ -68,28 +68,66 @@ install_rofi() {
 }
 
 install_lazygit() {
+  echo ">>> Installing lazygit..."
   LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | \grep -Po '"tag_name": *"v\K[^"]*')
   curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/download/v${LAZYGIT_VERSION}/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
   tar xf lazygit.tar.gz lazygit
   sudo install lazygit -D -t /usr/local/bin/
 }
 
-echo ">>> Updating package lists..."
-sudo apt-get update
+install_tmux() {
+  echo ">>> Installing tmux and tmuxifier..."
+  sudo apt install -y tmux
+  git clone https://github.com/jimeh/tmuxifier.git ~/.tmuxifier
+}
 
-if command -v nvim &>/dev/null; then
-	echo "Neovim is already installed"
-else
-	install_neovim
-fi
+usage() {
+  echo "Usage: $0 [all|nvim|i3]"
+  echo "  all   Install everything"
+  echo "  nvim  Install Neovim and its dependencies"
+  echo "  i3    Install i3, polybar, and rofi"
+  exit 1
+}
 
-install_nvim_deps
-install_polybar
-install_rofi
-install_lazygit
+main() {
+  case "$1" in
+    all)
+      sudo apt-get update
+      if ! command -v nvim &>/dev/null; then
+        install_neovim
+      fi
+      install_nvim_deps
+      install_polybar
+      install_rofi
+      install_lazygit
+      install_tmux
+      ;;
+    nvim)
+      sudo apt-get update
+      if ! command -v nvim &>/dev/null; then
+        install_neovim
+      fi
+      install_nvim_deps
+      install_lazygit
+      install_tmux
+      ;;
+    i3)
+      sudo apt-get update
+      install_i3
+      install_polybar
+      install_rofi
+      ;;
+    *)
+      usage
+      ;;
+  esac
+  echo
+  echo ">>> Installation complete!"
+}
+
+main "$@"
 
 echo
-echo ">>> Installation complete!"
 echo "If you are using dotfiles + stow, run:"
 echo "    cd ~/dotfiles && stow i3"
 echo "    cd ~/dotfiles && stow polybar"
