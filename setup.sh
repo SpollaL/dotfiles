@@ -40,6 +40,15 @@ install_nvim_deps() {
   npm -v # Should print "11.6.2".
 }
 
+install_nerd_fonts() {
+  mkdir -p ~/.local/share/fonts
+  cd ~/.local/share/fonts
+  curl -LO https://github.com/ryanoasis/nerd-fonts/releases/latest/download/JetBrainsMono.zip
+  unzip -o JetBrainsMono.zip
+  rm JetBrainsMono.zip
+  fc-cache -f >/dev/null 2>&1 || true
+}
+
 install_i3() {
   echo ">>> Installing i3 window manager..."
   sudo apt install -y \
@@ -79,6 +88,16 @@ install_tmux() {
   echo ">>> Installing tmux and tmuxifier..."
   sudo apt install -y tmux
   git clone https://github.com/jimeh/tmuxifier.git ~/.tmuxifier
+
+  LINE1='export PATH="$PATH:$HOME/.tmux/plugins/tmuxifier/bin"'
+  LINE2='export EDITOR=nvim'
+  LINE3='eval "$(tmuxifier init -)"'
+  
+  for line in "$LINE1" "$LINE2" "$LINE3"; do
+    if ! grep -Fxq "$line" "$HOME/.bashrc"; then
+      printf "%s\n" "$line" >> "$HOME/.bashrc"
+    fi
+  done
 }
 
 usage() {
@@ -97,6 +116,7 @@ main() {
         install_neovim
       fi
       install_nvim_deps
+      install_nerd_fonts
       install_polybar
       install_rofi
       install_lazygit
@@ -108,6 +128,7 @@ main() {
         install_neovim
       fi
       install_nvim_deps
+      install_nerd_fonts
       install_lazygit
       install_tmux
       ;;
