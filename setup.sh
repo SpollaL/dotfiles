@@ -22,7 +22,7 @@ install_neovim() {
 
 install_nvim_deps() {
   echo ">>> Installing neovim plugins dependencies"
-  sudo apt install -y build-essential
+  sudo apt install -y build-essential ripgrep
 
   # Download and install nvm:
   curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash

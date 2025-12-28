@@ -7,6 +7,7 @@ return {
 			"rcarriga/nvim-dap-ui",
 		  "jay-babu/mason-nvim-dap.nvim",
       "leoluz/nvim-dap-go",
+      "mfussenegger/nvim-dap-python",
       "folke/which-key.nvim",
 		},
   config = function()
@@ -16,6 +17,8 @@ return {
     })
     require("dapui").setup()
     require("dap-go").setup()
+    require("dap-python").setup("uv")
+    require('dap-python').test_runner = "pytest"
 
     dap.listeners.before.attach.dapui_config = function()
       dapui.open()
@@ -29,6 +32,10 @@ return {
     dap.listeners.before.event_exited.dapui_config = function()
       dapui.close()
     end
+    vim.keymap.set("n", "<Leader>dt", function()
+      require("dap-python").test_method()
+      vim.cmd.Neotree("close")
+    end, { desc = "DAP: Debug Closest Test" })
     vim.keymap.set("n", "<Leader>dc", function()
       dap.continue()
       vim.cmd.Neotree("close")
@@ -42,7 +49,7 @@ return {
     vim.keymap.set("n", "<Leader>dO", function()
       dap.step_out()
     end, { desc = "DAP: Step Out" })
-    vim.keymap.set("n", "<Leader>dt", function()
+    vim.keymap.set("n", "<Leader>db", function()
       dap.toggle_breakpoint()
     end, { desc = "DAP: Toggle Breakpoint" })
     vim.keymap.set("n", "<Leader>ds", function()
