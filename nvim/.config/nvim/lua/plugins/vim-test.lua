@@ -1,6 +1,6 @@
 return {
   'vim-test/vim-test',
-  dependencies = { 'preservim/vimux' },
+  dependencies = { 'preservim/vimux', 'folke/which-key.nvim' },
   config = function()
     vim.cmd('nmap <silent> <leader>tt :TestNearest<CR>')
     vim.cmd('nmap <silent> <leader>tT :TestFile<CR>')
@@ -8,5 +8,9 @@ return {
     vim.cmd('nmap <silent> <leader>tl :TestLast<CR>')
     vim.cmd('nmap <silent> <leader>tg :TestVisit<CR>')
     vim.cmd('let test#strategy = "vimux"')
+    local wk = require("which-key")
+    wk.add({
+      { "<leader>t", group = "Tests" }, -- group
+    })
   end,
 }
