@@ -77,7 +77,7 @@ return {
         cr = "<space>s<cr>",
         interrupt = "<space>s<space>",
         exit = "<space>sq",
-        clear = "<space>cl",
+        clear = "<space>rc",
       },
       -- If the highlight is on, you can change how it looks
       -- For the available options, check nvim_set_hl
@@ -90,5 +90,11 @@ return {
     -- iron also has a list of commands, see :h iron-commands for all available commands
     vim.keymap.set('n', '<space>rf', '<cmd>IronFocus<cr>')
     vim.keymap.set('n', '<space>rh', '<cmd>IronHide<cr>')
+    local wk = require("which-key")
+    wk.add({
+      { "<leader>s", group = "REPL" }, -- group
+      { "<leader>r", group = "REPL" }, -- group
+      { "<leader>m", group = "REPL" }, -- group
+    })
   end,
 }
