@@ -117,6 +117,7 @@ main() {
       fi
       install_nvim_deps
       install_nerd_fonts
+      install_i3
       install_polybar
       install_rofi
       install_lazygit
