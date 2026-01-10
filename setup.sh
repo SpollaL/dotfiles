@@ -47,6 +47,7 @@ install_nerd_fonts() {
   unzip -o JetBrainsMono.zip
   rm JetBrainsMono.zip
   fc-cache -f >/dev/null 2>&1 || true
+  cd ~
 }
 
 install_i3() {
@@ -155,5 +156,6 @@ echo "    cd ~/dotfiles && stow i3"
 echo "    cd ~/dotfiles && stow polybar"
 echo "    cd ~/dotfiles && stow rofi"
 echo "    cd ~/dotfiles && stow nvim"
+echo "    cd ~/dotfiles && stow tmux"
 echo
 echo ">>> Log out and log back in to start i3 (or restart i3 with \$mod+Shift+r)."
