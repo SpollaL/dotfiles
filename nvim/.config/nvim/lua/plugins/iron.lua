@@ -56,28 +56,28 @@ return {
       -- Iron doesn't set keymaps by default anymore.
       -- You can set them here or manually add keymaps to the functions in iron.core
       keymaps = {
-        toggle_repl = "<space>rr", -- toggles the repl open and closed.
+        toggle_repl = "<leader>ir", -- toggles the repl open and closed.
         -- If repl_open_command is a table as above, then the following keymaps are
         -- available
-        -- toggle_repl_with_cmd_1 = "<space>rv",
-        -- toggle_repl_with_cmd_2 = "<space>rh",
-        restart_repl = "<space>rR", -- calls `IronRestart` to restart the repl
-        send_motion = "<space>sc",
-        visual_send = "<space>sc",
-        send_file = "<space>sf",
-        send_line = "<space>sl",
-        send_paragraph = "<space>sp",
-        send_until_cursor = "<space>su",
-        send_mark = "<space>sm",
-        send_code_block = "<space>sb",
-        send_code_block_and_move = "<space>sn",
-        mark_motion = "<space>mc",
-        mark_visual = "<space>mc",
-        remove_mark = "<space>md",
-        cr = "<space>s<cr>",
-        interrupt = "<space>s<space>",
-        exit = "<space>sq",
-        clear = "<space>rc",
+        -- toggle_repl_with_cmd_1 = "<leader>iv",
+        -- toggle_repl_with_cmd_2 = "<leader>ih",
+        restart_repl = "<leader>iR", -- calls `IronRestart` to restart the repl
+        send_motion = "<leader>ic",
+        visual_send = "<leader>ic",
+        send_file = "<leader>if",
+        send_line = "<leader>il",
+        send_paragraph = "<leader>ip",
+        send_until_cursor = "<leader>iu",
+        send_mark = "<leader>im",
+        send_code_block = "<leader>ib",
+        send_code_block_and_move = "<leader>in",
+        mark_motion = "<leader>ic",
+        mark_visual = "<leader>ic",
+        remove_mark = "<leader>id",
+        cr = "<leader>i<cr>",
+        interrupt = "<leader>i<space>",
+        exit = "<leader>iq",
+        clear = "<leader>ir",
       },
       -- If the highlight is on, you can change how it looks
       -- For the available options, check nvim_set_hl
@@ -88,13 +88,11 @@ return {
     }
 
     -- iron also has a list of commands, see :h iron-commands for all available commands
-    vim.keymap.set('n', '<space>rf', '<cmd>IronFocus<cr>')
-    vim.keymap.set('n', '<space>rh', '<cmd>IronHide<cr>')
+    vim.keymap.set('n', '<leader>if', '<cmd>IronFocus<cr>')
+    vim.keymap.set('n', '<leader>ih', '<cmd>IronHide<cr>')
     local wk = require("which-key")
     wk.add({
-      { "<leader>s", group = "REPL" }, -- group
-      { "<leader>r", group = "REPL" }, -- group
-      { "<leader>m", group = "REPL" }, -- group
+      { "<leader>i", group = "REPL" }, -- group
     })
   end,
 }

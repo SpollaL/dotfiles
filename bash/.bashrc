@@ -133,3 +133,9 @@ export NVM_DIR="$HOME/.nvm"
 export PATH="$PATH:$HOME/.tmux/plugins/tmuxifier/bin"
 export EDITOR=nvim
 eval "$(tmuxifier init -)"
+
+# go installation
+export PATH=$PATH:/usr/local/go/bin
+
+# opencode
+export PATH=/home/spolla-l/.opencode/bin:$PATH
