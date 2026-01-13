@@ -13,7 +13,29 @@ return {
       enabled = true,
       timeout = 3000,
     },
-    picker = { enabled = true },
+    picker = {
+      enabled = true,
+      actions = {
+        copy_filepath = function(picker)
+          local item = picker:current()
+          if item and item._path then
+            vim.fn.setreg("+", item._path)
+          end
+        end,
+      },
+      win = {
+        input = {
+          keys = {
+            ["<C-y>"] = { "copy_filepath", mode = { "i", "n" } },
+          },
+        },
+        list = {
+          keys = {
+            ["<C-y>"] = { "copy_filepath", mode = { "n", "x" } },
+          },
+        },
+      },
+    },
     quickfile = { enabled = true },
     scope = { enabled = true },
     scroll = { enabled = true },
@@ -32,7 +54,7 @@ return {
     { "<leader>/", function() require("snacks").picker.grep() end, desc = "Grep" },
     { "<leader>:", function() require("snacks").picker.command_history() end, desc = "Command History" },
     { "<leader>e", function() require("snacks").explorer() end, desc = "File Explorer" },
-    
+
     { "<leader>fc", function() require("snacks").picker.files({ cwd = vim.fn.stdpath("config") }) end, desc = "Find Config File" },
     { "<leader>ff", function() require("snacks").picker.files() end, desc = "Find Files" },
     { "<leader>fg", function() require("snacks").picker.git_files() end, desc = "Find Git Files" },
