@@ -8,7 +8,7 @@ return {
 	{
 		"mason-org/mason-lspconfig.nvim",
 		opts = {
-			ensure_installed = { "lua_ls", "postgres_lsp", "ruff", "pyright" , "dockerls", "gopls"},
+			ensure_installed = { "lua_ls", "postgres_lsp", "ruff" , "dockerls", "gopls"},
 		},
 		dependencies = {
 			{ "mason-org/mason.nvim", opts = {} },

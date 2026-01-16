@@ -34,11 +34,9 @@ return {
     end
     vim.keymap.set("n", "<Leader>dt", function()
       require("dap-python").test_method()
-      vim.cmd.Neotree("close")
     end, { desc = "DAP: Debug Closest Test" })
     vim.keymap.set("n", "<Leader>dc", function()
       dap.continue()
-      vim.cmd.Neotree("close")
     end, { desc = "DAP: Continue" })
     vim.keymap.set("n", "<Leader>do", function()
       dap.step_over()
