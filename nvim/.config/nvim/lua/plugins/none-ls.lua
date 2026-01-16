@@ -23,12 +23,20 @@ return {
       })
     end
       null_ls.setup({
+      debug=true,
 			sources = {
 				null_ls.builtins.formatting.stylua,
-				null_ls.builtins.diagnostics.mypy.with({
-					command = "uv",
-					args = { "run", "--env-file", ".env", "mypy", "$FILENAME" },
-				}),
+        null_ls.builtins.diagnostics.mypy.with({
+          command = "uv",
+          args = function(params)
+            return {
+                "run",
+                "mypy",
+                params.bufname,
+            }
+          end,
+          }
+        ),
         ruff_fix(),
 				null_ls.builtins.code_actions.refactoring,
 				null_ls.builtins.formatting.gofumpt,
