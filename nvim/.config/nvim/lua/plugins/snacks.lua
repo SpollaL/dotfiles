@@ -27,11 +27,13 @@ return {
         input = {
           keys = {
             ["<C-y>"] = { "copy_filepath", mode = { "i", "n" } },
+            ["s"] = { "edit_vsplit", mode = { "n" } },
           },
         },
         list = {
           keys = {
             ["<C-y>"] = { "copy_filepath", mode = { "n", "x" } },
+            ["s"] = { "edit_vsplit", mode = { "n" } },
           },
         },
       },
@@ -51,7 +53,7 @@ return {
     -- Top Pickers & Explorer
     { "<leader><space>", function() require("snacks").picker.smart() end, desc = "Smart Find Files" },
     { "<leader>,", function() require("snacks").picker.buffers() end, desc = "Buffers" },
-    { "<leader>/", function() require("snacks").picker.grep() end, desc = "Grep" },
+    { "<leader>/", function() require("snacks").picker.grep({hidden=true, ignored=true}) end, desc = "Grep" },
     { "<leader>:", function() require("snacks").picker.command_history() end, desc = "Command History" },
     { "<leader>e", function() require("snacks").explorer() end, desc = "File Explorer" },
 
@@ -74,7 +76,7 @@ return {
     { "<leader>gp", function() require("snacks").picker.gh_pr() end, desc = "GitHub Pull Requests (open)" },
     { "<leader>gP", function() require("snacks").picker.gh_pr({ state = "all" }) end, desc = "GitHub Pull Requests (all)" },
     { "<leader>sB", function() require("snacks").picker.grep_buffers() end, desc = "Grep Open Buffers" },
-    { "<leader>sg", function() require("snacks").picker.grep() end, desc = "Grep" },
+    { "<leader>sg", function() require("snacks").picker.grep({hidden=true, ignored=true}) end, desc = "Grep" },
     { "<leader>sw", function() require("snacks").picker.grep_word() end, desc = "Visual selection or word", mode = { "n", "x" } },
     -- search
     { '<leader>s"', function() require("snacks").picker.registers() end, desc = "Registers" },
