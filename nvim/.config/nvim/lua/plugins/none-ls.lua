@@ -15,8 +15,8 @@ return {
         method = methods.internal.FORMATTING,
         filetypes = { "python" },
         generator_opts = {
-          command = "uv",
-          args = {"run", "ruff", "--fix", "-e", "-n", "--stdin-filename", "$FILENAME", "-" },
+          command = "ruff",
+          args = {"--fix", "-e", "-n", "--stdin-filename", "$FILENAME", "-" },
           to_stdin = true,
         },
         factory = helpers.formatter_factory,
@@ -27,11 +27,9 @@ return {
 			sources = {
 				null_ls.builtins.formatting.stylua,
         null_ls.builtins.diagnostics.mypy.with({
-          command = "uv",
+          command = "mypy",
           args = function(params)
             return {
-                "run",
-                "mypy",
                 params.bufname,
             }
           end,
@@ -43,6 +41,7 @@ return {
 				null_ls.builtins.formatting.goimports,
 				null_ls.builtins.formatting.golines,
         null_ls.builtins.diagnostics.hadolint,
+        null_ls.builtins.formatting.prettier,
 			},
 		})
 		vim.keymap.set("n", "<leader>gf", vim.lsp.buf.format, { desc = "Format buffer" })

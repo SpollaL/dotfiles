@@ -17,7 +17,7 @@ return {
             command = {"sh"}
           },
           python = {
-            command = { "uv", "run", "ipython", "--no-autoindent" },
+            command = { "ipython", "--no-autoindent" },
             format = common.bracketed_paste_python,
             block_dividers = { "# %%", "#%%" },
             env = {PYTHON_BASIC_REPL = "1"} --this is needed for python3.13 and up.
@@ -62,7 +62,7 @@ return {
         -- toggle_repl_with_cmd_1 = "<leader>iv",
         -- toggle_repl_with_cmd_2 = "<leader>ih",
         restart_repl = "<leader>iR", -- calls `IronRestart` to restart the repl
-        send_motion = "<leader>ic",
+        send_motion = "<leader>im",
         visual_send = "<leader>ic",
         send_file = "<leader>if",
         send_line = "<leader>il",
@@ -71,8 +71,8 @@ return {
         send_mark = "<leader>im",
         send_code_block = "<leader>ib",
         send_code_block_and_move = "<leader>in",
-        mark_motion = "<leader>ic",
-        mark_visual = "<leader>ic",
+        mark_motion = "<leader>iM",
+        mark_visual = "<leader>iC",
         remove_mark = "<leader>id",
         cr = "<leader>i<cr>",
         interrupt = "<leader>i<space>",
