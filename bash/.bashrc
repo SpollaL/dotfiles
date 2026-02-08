@@ -117,7 +117,7 @@ if ! shopt -oq posix; then
 fi 
 
 # i3config shortcut
-alias i3config='code ~/.config/i3/config'
+alias i3config='nvim ~/.config/i3/config'
 
 # # Generated for envman. Do not edit.
 # [ -s "$HOME/.config/envman/load.sh" ] && source "$HOME/.config/envman/load.sh"
@@ -130,6 +130,9 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
 [ -f ~/.fzf.bash ] && source ~/.fzf.bash
+# Set up fzf key bindings and fuzzy completion
+eval "$(fzf --bash)"
+
 export PATH="$PATH:$HOME/.tmux/plugins/tmuxifier/bin"
 export EDITOR=nvim
 eval "$(tmuxifier init -)"
@@ -139,3 +142,4 @@ export PATH=$PATH:/usr/local/go/bin
 
 # opencode
 export PATH=/home/spolla-l/.opencode/bin:$PATH
+. "$HOME/.cargo/env"
