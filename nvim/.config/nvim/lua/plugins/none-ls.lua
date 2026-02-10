@@ -1,7 +1,6 @@
-
 return {
-	"nvimtools/none-ls.nvim",
-	config = function()
+  "nvimtools/none-ls.nvim",
+  config = function()
     local null_ls = require("null-ls")
     local methods = require("null-ls.methods")
     local helpers = require("null-ls.helpers")
@@ -22,10 +21,26 @@ return {
         factory = helpers.formatter_factory,
       })
     end
-      null_ls.setup({
-      debug=true,
-			sources = {
-				null_ls.builtins.formatting.stylua,
+    local function rustfmt_fix()
+      return helpers.make_builtin({
+        name = "rustfmt",
+        meta = {
+          url = "https://github.com/rust-lang/rustfmt",
+          description = "A tool for formatting Rust code.",
+        },
+        method = methods.internal.FORMATTING,
+        filetypes = { "rust" },
+        generator_opts = {
+          command = "rustfmt",
+          args = { "--edition", "2021" },
+          to_stdin = true,
+        },
+        factory = helpers.formatter_factory,
+      })
+    end
+    null_ls.setup({
+      sources = {
+        null_ls.builtins.formatting.stylua,
         null_ls.builtins.diagnostics.mypy.with({
           command = "mypy",
           args = function(params)
@@ -36,14 +51,16 @@ return {
           }
         ),
         ruff_fix(),
-				null_ls.builtins.code_actions.refactoring,
-				null_ls.builtins.formatting.gofumpt,
-				null_ls.builtins.formatting.goimports,
-				null_ls.builtins.formatting.golines,
+        rustfmt_fix(),
+        null_ls.builtins.code_actions.refactoring,
+        null_ls.builtins.formatting.gofumpt,
+        null_ls.builtins.formatting.goimports,
+        null_ls.builtins.formatting.golines,
         null_ls.builtins.diagnostics.hadolint,
         null_ls.builtins.formatting.prettier,
-			},
-		})
-		vim.keymap.set("n", "<leader>gf", vim.lsp.buf.format, { desc = "Format buffer" })
-	end
+        null_ls.builtins.diagnostics.kube_linter,
+      },
+    })
+    vim.keymap.set("n", "<leader>gf", vim.lsp.buf.format, { desc = "Format buffer" })
+  end
 }
