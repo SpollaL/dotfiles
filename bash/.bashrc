@@ -136,6 +136,3 @@ eval "$(tmuxifier init -)"
 
 # go installation
 export PATH=$PATH:/usr/local/go/bin
-
-# opencode
-export PATH=/home/spolla-l/.opencode/bin:$PATH
