@@ -13,6 +13,7 @@ set $mod Mod4
 
 # -----Spolla------
 exec --no-startup-id xrandr --output HDMI-1 --auto --right-of eDP-1
+exec --no-startup-id xset s 600 && xset dpms 600 600 600
 exec_always --no-startup-id $HOME/.config/polybar/launch.sh
 exec --no-startup-id feh --bg-fill /usr/share/backgrounds/warty-final-ubuntu.png
 # -----------------
@@ -64,7 +65,8 @@ floating_modifier $mod
 tiling_drag modifier titlebar
 
 # start a terminal
-bindsym $mod+Return exec i3-sensible-terminal
+set $term /home/spolla-l/.local/kitty.app/bin/kitty
+bindsym $mod+Return exec $term
 
 # kill focused window
 bindsym $mod+Shift+q kill
