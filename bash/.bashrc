@@ -56,21 +56,38 @@ if [ -n "$force_color_prompt" ]; then
     fi
 fi
 
-if [ "$color_prompt" = yes ]; then
-    PS1='${debian_chroot:+($debian_chroot)}\[\033[01;32m\]\u@\h\[\033[00m\]:\[\033[01;34m\]\w\[\033[00m\]\$ '
-else
-    PS1='${debian_chroot:+($debian_chroot)}\u@\h:\w\$ '
-fi
 unset color_prompt force_color_prompt
 
-# If this is an xterm set the title to user@host:dir
-case "$TERM" in
-xterm*|rxvt*)
-    PS1="\[\e]0;${debian_chroot:+($debian_chroot)}\u@\h: \w\a\]$PS1"
-    ;;
-*)
-    ;;
-esac
+# ── Catppuccin Mocha prompt ───────────────────────────────────────────────────
+__prompt_command() {
+    local exit_code=$?
+
+    # Catppuccin Mocha truecolor
+    local reset='\[\e[0m\]'
+    local mauve='\[\e[38;2;203;166;247m\]'
+    local sky='\[\e[38;2;137;220;235m\]'
+    local blue='\[\e[38;2;137;180;250m\]'
+    local yellow='\[\e[38;2;249;226;175m\]'
+    local green='\[\e[38;2;166;227;161m\]'
+    local red='\[\e[38;2;243;139;168m\]'
+    local overlay='\[\e[38;2;108;112;134m\]'
+
+    # Git branch
+    local git_part=""
+    if git rev-parse --is-inside-work-tree &>/dev/null 2>&1; then
+        local branch
+        branch=$(git symbolic-ref --short HEAD 2>/dev/null || git rev-parse --short HEAD 2>/dev/null)
+        git_part=" ${overlay}on ${yellow} ${branch}${reset}"
+    fi
+
+    # ❯ turns red if last command failed
+    local arrow_color=$green
+    [ $exit_code -ne 0 ] && arrow_color=$red
+
+    PS1="${mauve} \u${reset}${overlay}@${reset}${sky}\h${reset} ${blue} \w${reset}${git_part}\n${arrow_color}❯${reset} "
+}
+
+PROMPT_COMMAND=__prompt_command
 
 # enable color support of ls and also add handy aliases
 if [ -x /usr/bin/dircolors ]; then

@@ -21,6 +21,9 @@ vim.diagnostic.config({
 
 vim.g.mapleader = " "
 
+-- Dedicated Python env for remote plugins (molten-nvim)
+vim.g.python3_host_prog = vim.fn.expand("~/.venv/neovim/bin/python")
+
 -- -- NOTE: Ensures that when exiting NeoVim, Zellij returns to normal mode
 -- vim.api.nvim_create_autocmd("VimLeave", {
 --     pattern = "*",
