@@ -85,6 +85,37 @@ install_lazygit() {
   sudo install lazygit -D -t /usr/local/bin/
 }
 
+setup_molten_env() {
+  echo ">>> Setting up Neovim Python environment for molten..."
+
+  if ! command -v uv &>/dev/null; then
+    echo "Installing uv..."
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    . "$HOME/.local/bin/env" 2>/dev/null || export PATH="$HOME/.local/bin:$PATH"
+  fi
+
+  uv venv ~/.venv/neovim
+  uv pip install --python ~/.venv/neovim pynvim jupyter_client nbformat
+
+  # imagemagick: CLI used by Snacks.image; libmagickwand-dev: FFI lib for the magick luarock
+  sudo apt install -y imagemagick libmagickwand-dev
+  if ! command -v luarocks &>/dev/null; then
+    sudo apt install -y luarocks
+  fi
+  luarocks install magick
+
+  echo "Neovim Python environment created at ~/.venv/neovim"
+  echo "Run ':UpdateRemotePlugins' inside Neovim after first launch."
+}
+
+install_kitty() {
+  echo ">>> Installing kitty terminal..."
+  curl -L https://sw.kovidgoyal.net/kitty/installer.sh | sh /dev/stdin
+  mkdir -p ~/.local/bin
+  ln -sf ~/.local/kitty.app/bin/kitty ~/.local/bin/kitty
+  ln -sf ~/.local/kitty.app/bin/kitten ~/.local/bin/kitten
+}
+
 install_tmux() {
   echo ">>> Installing tmux and tmuxifier..."
   sudo apt install -y tmux
@@ -102,10 +133,11 @@ install_tmux() {
 }
 
 usage() {
-  echo "Usage: $0 [all|nvim|i3]"
-  echo "  all   Install everything"
-  echo "  nvim  Install Neovim and its dependencies"
-  echo "  i3    Install i3, polybar, and rofi"
+  echo "Usage: $0 [all|nvim|i3|molten]"
+  echo "  all     Install everything"
+  echo "  nvim    Install Neovim and its dependencies"
+  echo "  i3      Install i3, polybar, and rofi"
+  echo "  molten  Set up the Neovim Python environment for molten"
   exit 1
 }
 
@@ -118,9 +150,11 @@ main() {
       fi
       install_nvim_deps
       install_nerd_fonts
+      setup_molten_env
       install_i3
       install_polybar
       install_rofi
+      install_kitty
       install_lazygit
       install_tmux
       ;;
@@ -131,6 +165,7 @@ main() {
       fi
       install_nvim_deps
       install_nerd_fonts
+      setup_molten_env
       install_lazygit
       install_tmux
       ;;
@@ -139,6 +174,10 @@ main() {
       install_i3
       install_polybar
       install_rofi
+      install_kitty
+      ;;
+    molten)
+      setup_molten_env
       ;;
     *)
       usage
@@ -156,6 +195,7 @@ echo "    cd ~/dotfiles && stow i3"
 echo "    cd ~/dotfiles && stow polybar"
 echo "    cd ~/dotfiles && stow rofi"
 echo "    cd ~/dotfiles && stow nvim"
+echo "    cd ~/dotfiles && stow kitty"
 echo "    cd ~/dotfiles && stow tmux"
 echo
 echo ">>> Log out and log back in to start i3 (or restart i3 with \$mod+Shift+r)."
