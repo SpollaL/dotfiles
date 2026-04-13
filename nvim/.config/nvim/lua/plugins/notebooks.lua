@@ -4,27 +4,41 @@ return {
     "3rd/image.nvim",
     version = "1.1.0",
     lazy = false, -- must be set up before molten tries to render images
-    opts = {
-      backend = "kitty",
-      integrations = {
-        markdown = {
-          enabled = true,
-          clear_in_insert_mode = false,
-          only_render_image_at_cursor = false,
-          filetypes = { "markdown", "vimwiki" },
+    config = function()
+      -- image.nvim checks TERM/TERM_PROGRAM for "kitty" to enable itself.
+      -- Inside tmux those are overwritten, so spoof TERM_PROGRAM when we
+      -- know the outer terminal is Kitty (TERMINAL=kitty or KITTY_WINDOW_ID set).
+      local in_kitty = (os.getenv("KITTY_WINDOW_ID") ~= nil and os.getenv("KITTY_WINDOW_ID") ~= "")
+        or os.getenv("TERM_PROGRAM") == "kitty"
+        or os.getenv("TERMINAL") == "kitty"
+      if in_kitty then
+        vim.env.TERM_PROGRAM = "kitty"
+      end
+
+      require("image").setup({
+        backend = "kitty",
+        integrations = {
+          markdown = {
+            enabled = true,
+            clear_in_insert_mode = false,
+            only_render_image_at_cursor = false,
+            filetypes = { "markdown", "vimwiki" },
+          },
+          neorg = { enabled = false },
+          typst = { enabled = false },
+          html = { enabled = false },
+          css = { enabled = false },
         },
-        neorg = { enabled = false },
-        typst = { enabled = false },
-        html = { enabled = false },
-        css = { enabled = false },
-      },
-      -- Must be set to avoid terminal crashes on large images
-      max_width = 100,
-      max_height = 12,
-      max_width_window_percentage = math.huge,
-      max_height_window_percentage = math.huge,
-      kitty_method = "normal",
-    },
+        -- Must be set to avoid terminal crashes on large images
+        max_width = 100,
+        max_height = 12,
+        max_width_window_percentage = math.huge,
+        max_height_window_percentage = math.huge,
+        kitty_method = "normal",
+        -- Hide images when the tmux window loses focus to prevent bleed into other panes
+        tmux_show_only_in_active_window = true,
+      })
+    end,
   },
 
   -- Jupyter kernel execution with inline outputs
@@ -35,8 +49,9 @@ return {
     dependencies = { "3rd/image.nvim" },
     init = function()
       -- Use image.nvim when running inside Kitty (works in tmux too via passthrough)
-      local in_kitty = os.getenv("KITTY_WINDOW_ID") ~= nil and os.getenv("KITTY_WINDOW_ID") ~= ""
+      local in_kitty = (os.getenv("KITTY_WINDOW_ID") ~= nil and os.getenv("KITTY_WINDOW_ID") ~= "")
         or os.getenv("TERM_PROGRAM") == "kitty"
+        or os.getenv("TERMINAL") == "kitty"
       vim.g.molten_image_provider = in_kitty and "image.nvim" or "none"
       -- Output display
       vim.g.molten_virt_text_output = true     -- show output as virtual text below cell

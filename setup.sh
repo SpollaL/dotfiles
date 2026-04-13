@@ -97,6 +97,13 @@ setup_molten_env() {
   uv venv ~/.venv/neovim
   uv pip install --python ~/.venv/neovim pynvim jupyter_client nbformat
 
+  # imagemagick: CLI used by Snacks.image; libmagickwand-dev: FFI lib for the magick luarock
+  sudo apt install -y imagemagick libmagickwand-dev
+  if ! command -v luarocks &>/dev/null; then
+    sudo apt install -y luarocks
+  fi
+  luarocks install magick
+
   echo "Neovim Python environment created at ~/.venv/neovim"
   echo "Run ':UpdateRemotePlugins' inside Neovim after first launch."
 }
