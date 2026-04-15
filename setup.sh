@@ -116,6 +116,25 @@ install_kitty() {
   ln -sf ~/.local/kitty.app/bin/kitten ~/.local/bin/kitten
 }
 
+install_keyd() {
+  echo ">>> Installing keyd from source..."
+  sudo apt install -y git build-essential
+
+  local tmp_dir
+  tmp_dir=$(mktemp -d)
+  git clone https://github.com/rvaiya/keyd "$tmp_dir/keyd"
+  make -C "$tmp_dir/keyd"
+  sudo make -C "$tmp_dir/keyd" install
+  rm -rf "$tmp_dir"
+
+  DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+  sudo mkdir -p /etc/keyd
+  sudo ln -sf "${DOTFILES_DIR}/keyd/etc/keyd/default.conf" /etc/keyd/default.conf
+
+  sudo systemctl enable --now keyd
+  echo "keyd installed and enabled. Config linked at /etc/keyd/default.conf"
+}
+
 install_tmux() {
   echo ">>> Installing tmux and tmuxifier..."
   sudo apt install -y tmux
@@ -133,11 +152,12 @@ install_tmux() {
 }
 
 usage() {
-  echo "Usage: $0 [all|nvim|i3|molten]"
+  echo "Usage: $0 [all|nvim|i3|molten|keyd]"
   echo "  all     Install everything"
   echo "  nvim    Install Neovim and its dependencies"
   echo "  i3      Install i3, polybar, and rofi"
   echo "  molten  Set up the Neovim Python environment for molten"
+  echo "  keyd    Install keyd and deploy keyboard layout"
   exit 1
 }
 
@@ -157,6 +177,10 @@ main() {
       install_kitty
       install_lazygit
       install_tmux
+      install_keyd
+      ;;
+    keyd)
+      install_keyd
       ;;
     nvim)
       sudo apt-get update
@@ -197,5 +221,6 @@ echo "    cd ~/dotfiles && stow rofi"
 echo "    cd ~/dotfiles && stow nvim"
 echo "    cd ~/dotfiles && stow kitty"
 echo "    cd ~/dotfiles && stow tmux"
+echo "Note: keyd config is deployed via setup.sh keyd (symlinked to /etc/keyd/), not stow."
 echo
 echo ">>> Log out and log back in to start i3 (or restart i3 with \$mod+Shift+r)."
