@@ -153,3 +153,9 @@ eval "$(tmuxifier init -)"
 
 # go installation
 export PATH=$PATH:/usr/local/go/bin
+
+export ANDROID_HOME=$HOME/android-sdk
+export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator
+
+# opencode
+export PATH=/home/spolla-l/.opencode/bin:$PATH
