@@ -147,9 +147,8 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
 [ -f ~/.fzf.bash ] && source ~/.fzf.bash
-export PATH="$PATH:$HOME/.tmux/plugins/tmuxifier/bin"
 export EDITOR=nvim
-eval "$(tmuxifier init -)"
+eval "$(zoxide init bash)"
 
 # go installation
 export PATH=$PATH:/usr/local/go/bin
@@ -159,3 +158,7 @@ export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-
 
 # opencode
 export PATH=/home/spolla-l/.opencode/bin:$PATH
+# Auto-attach to tmux on terminal open
+if command -v tmux &>/dev/null && [ -z "$TMUX" ]; then
+  tmux attach 2>/dev/null || tmux new-session -s main
+fi

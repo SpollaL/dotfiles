@@ -293,6 +293,14 @@ return {
         cell_markers = { python = "# %%" },
       })
 
+      -- The plugin's pattern fn prints "[NotebookNavigator] Empty filetype" for
+      -- every buffer with no filetype (dashboard, etc.). Skip those silently.
+      local nn_pattern = nn.minihipatterns_spec.pattern
+      nn.minihipatterns_spec.pattern = function(buf_id)
+        if vim.bo[buf_id].filetype == "" then return nil end
+        return nn_pattern(buf_id)
+      end
+
       -- Cell separator decoration: dim horizontal rule above each # %%
       local hipatterns = require("mini.hipatterns")
       hipatterns.setup({
