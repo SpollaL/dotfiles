@@ -136,19 +136,20 @@ install_keyd() {
 }
 
 install_tmux() {
-  echo ">>> Installing tmux and tmuxifier..."
-  sudo apt install -y tmux
-  git clone https://github.com/jimeh/tmuxifier.git ~/.tmuxifier
+  echo ">>> Installing tmux, sesh, and fzf..."
+  sudo apt install -y tmux fzf zoxide
 
-  LINE1='export PATH="$PATH:$HOME/.tmux/plugins/tmuxifier/bin"'
-  LINE2='export EDITOR=nvim'
-  LINE3='eval "$(tmuxifier init -)"'
-  
-  for line in "$LINE1" "$LINE2" "$LINE3"; do
-    if ! grep -Fxq "$line" "$HOME/.bashrc"; then
-      printf "%s\n" "$line" >> "$HOME/.bashrc"
-    fi
-  done
+  # Install sesh (session manager)
+  SESH_VERSION=$(curl -s "https://api.github.com/repos/joshmedeski/sesh/releases/latest" | grep -Po '"tag_name": *"v\K[^"]*')
+  curl -Lo sesh.tar.gz "https://github.com/joshmedeski/sesh/releases/download/v${SESH_VERSION}/sesh_Linux_x86_64.tar.gz"
+  tar xf sesh.tar.gz sesh
+  sudo install sesh -D -t /usr/local/bin/
+  rm sesh.tar.gz sesh
+
+  LINE='export EDITOR=nvim'
+  if ! grep -Fxq "$LINE" "$HOME/.bashrc"; then
+    printf "%s\n" "$LINE" >> "$HOME/.bashrc"
+  fi
 }
 
 usage() {

@@ -12,8 +12,8 @@ vim.keymap.set("n", "<C-j>", ":wincmd j<CR>")
 vim.keymap.set("n", "<C-h>", ":wincmd h<CR>")
 vim.keymap.set("n", "<C-l>", ":wincmd l<CR>")
 
--- Exit terminal mode with Escape
-vim.keymap.set("t", "<Esc>", "<C-\\><C-n>", { desc = "Exit terminal mode" })
+-- Exit terminal mode with Ctrl-Q
+vim.keymap.set("t", "<C-q>", "<C-\\><C-n>", { desc = "Exit terminal mode" })
 
 vim.diagnostic.config({
 	float = { source = true },
@@ -23,6 +23,13 @@ vim.g.mapleader = " "
 
 -- Dedicated Python env for remote plugins (molten-nvim)
 vim.g.python3_host_prog = vim.fn.expand("~/.venv/neovim/bin/python")
+
+-- On WSL, xdg-open has no browser available; route URLs/files through Windows
+if vim.fn.has("wsl") == 1 then
+  vim.ui.open = function(uri)
+    return vim.system({ "explorer.exe", uri }, { detach = true })
+  end
+end
 
 -- -- NOTE: Ensures that when exiting NeoVim, Zellij returns to normal mode
 -- vim.api.nvim_create_autocmd("VimLeave", {

@@ -7,6 +7,13 @@ return {
     bigfile = { enabled = true },
     dashboard = { enabled = true },
     explorer = { enabled = true },
+    gitbrowse = {
+      -- WSL: explorer.exe lives at /mnt/c/Windows/ but isn't on $PATH,
+      -- so vim.ui.open's WSL fallback fails with ENOENT. Bypass it.
+      open = function(url)
+        vim.fn.jobstart({ "/mnt/c/Windows/explorer.exe", url }, { detach = true })
+      end,
+    },
     indent = { enabled = true },
     input = { enabled = true },
     notifier = {
