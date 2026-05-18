@@ -136,15 +136,8 @@ install_keyd() {
 }
 
 install_tmux() {
-  echo ">>> Installing tmux, sesh, and fzf..."
+  echo ">>> Installing tmux and fzf..."
   sudo apt install -y tmux fzf zoxide
-
-  # Install sesh (session manager)
-  SESH_VERSION=$(curl -s "https://api.github.com/repos/joshmedeski/sesh/releases/latest" | grep -Po '"tag_name": *"v\K[^"]*')
-  curl -Lo sesh.tar.gz "https://github.com/joshmedeski/sesh/releases/download/v${SESH_VERSION}/sesh_Linux_x86_64.tar.gz"
-  tar xf sesh.tar.gz sesh
-  sudo install sesh -D -t /usr/local/bin/
-  rm sesh.tar.gz sesh
 
   LINE='export EDITOR=nvim'
   if ! grep -Fxq "$LINE" "$HOME/.bashrc"; then

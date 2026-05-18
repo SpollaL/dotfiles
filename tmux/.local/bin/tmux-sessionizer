@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+export PATH="$HOME/.fzf/bin:$HOME/.local/bin:$PATH"
+
+if [[ $# -eq 1 ]]; then
+    selected=$1
+else
+    selected=$(find \
+        ~/workspace \
+        ~/workspace/media-mmm-dev-local \
+        ~/workspace/personal \
+        ~/dotfiles \
+        -mindepth 1 -maxdepth 1 -type d 2>/dev/null | fzf)
+fi
+
+[[ -z $selected ]] && exit 0
+
+selected_name=$(basename "$selected" | tr . _)
+
+if ! tmux has-session -t="$selected_name" 2>/dev/null; then
+    tmux new-session -ds "$selected_name" -c "$selected"
+
+    if [[ "$selected_name" == "media-mmm-dev-local" ]]; then
+        tmux send-keys -t "$selected_name" "~/.config/tmux/scripts/media-mmm.sh" Enter
+    fi
+fi
+
+tmux switch-client -t "$selected_name"
