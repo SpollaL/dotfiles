@@ -1,0 +1,75 @@
+#!/usr/bin/env bash
+# wsl-backup — selective backup of this WSL home dir to the Windows C: drive.
+#
+# Captures all source, every .git (local commits/stashes/unpushed branches),
+# dotfiles, and configs. Skips reproducible bulk: Docker data, language caches,
+# Rust target/, virtualenvs, node_modules, __pycache__, etc.
+#
+# Usage:   wsl-backup [DEST_DIR]      (DEST_DIR default: /mnt/c/wsl-backups)
+#
+# Output (in DEST_DIR):
+#   wsl-home-<user>-<YYYY-MM-DD>.tar.xz   the archive (xz -T0, multithreaded)
+#   wsl-home-<user>-<YYYY-MM-DD>.files.txt  full manifest of archived entries
+#   wsl-home-<user>-<YYYY-MM-DD>.sha256     checksum (verify: sha256sum -c)
+#
+# Restore: sudo tar -xpf <archive>.tar.xz -C "$(dirname "$HOME")"
+set -u
+
+DEST="${1:-/mnt/c/wsl-backups}"
+STAMP="$(date +%F)"
+BASE="wsl-home-${USER}-${STAMP}"
+OUT="${DEST}/${BASE}.tar.xz"
+MAN="${DEST}/${BASE}.files.txt"
+SUM="${DEST}/${BASE}.sha256"
+
+# Back up $HOME by name from its parent, so paths in the archive are "<user>/...".
+HOME_PARENT="$(dirname "$HOME")"
+HOME_NAME="$(basename "$HOME")"
+
+ts() { date '+%H:%M:%S'; }
+
+mkdir -p "$DEST"
+echo "[$(ts)] START backup -> $OUT"
+echo "[$(ts)] excludes: caches(.docker .cache .npm .cargo .rustup .nvm) + artifacts(target .venv venv node_modules __pycache__ .next .pytest_cache .mypy_cache .ruff_cache)"
+
+# Create + compress + checksum in a single pass. tee avoids re-reading the
+# multi-GB archive back over the slow 9p mount just to checksum it.
+tar -C "$HOME_PARENT" \
+  --exclude='.docker' --exclude='.cache' --exclude='.npm' \
+  --exclude='.cargo' --exclude='.rustup' --exclude='.nvm' \
+  --exclude='target' --exclude='.venv' --exclude='venv' \
+  --exclude='node_modules' --exclude='__pycache__' --exclude='.next' \
+  --exclude='.pytest_cache' --exclude='.mypy_cache' --exclude='.ruff_cache' \
+  --warning=no-file-changed --warning=no-file-removed \
+  -cpf - "$HOME_NAME" \
+  | xz -T0 -4 -c \
+  | tee "$OUT" \
+  | sha256sum | awk -v f="${BASE}.tar.xz" '{print $1"  "f}' > "$SUM"
+ps_codes=("${PIPESTATUS[@]}")
+echo "[$(ts)] pipe exit codes: tar=${ps_codes[0]} xz=${ps_codes[1]} tee=${ps_codes[2]} sha=${ps_codes[3]}"
+echo "    (tar=1 is OK: a file changed while being read, e.g. a live log)"
+
+if [[ "${ps_codes[1]}" -ne 0 || "${ps_codes[2]}" -ne 0 || "${ps_codes[3]}" -ne 0 ]]; then
+  echo "[$(ts)] FATAL: compression/write/checksum failed"
+  exit 1
+fi
+echo "[$(ts)] archive written:"
+ls -lh "$OUT"
+
+# Verify: a full decompress + tar table-of-contents proves the archive is
+# intact end-to-end, and doubles as the manifest.
+echo "[$(ts)] verifying (xz -dc | tar -tv)..."
+if set -o pipefail; xz -dc "$OUT" | tar -tvf - > "$MAN" 2>/dev/null; then
+  echo "[$(ts)] VERIFY OK: archive decompresses and untars cleanly"
+else
+  echo "[$(ts)] VERIFY FAILED"
+  exit 1
+fi
+set +o pipefail
+
+echo "[$(ts)] manifest entries: $(wc -l < "$MAN")"
+echo "[$(ts)] sha256:"
+cat "$SUM"
+echo "[$(ts)] outputs:"
+ls -lh "$OUT" "$MAN" "$SUM"
+echo "[$(ts)] DONE"

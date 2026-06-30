@@ -215,6 +215,7 @@ echo "    cd ~/dotfiles && stow rofi"
 echo "    cd ~/dotfiles && stow nvim"
 echo "    cd ~/dotfiles && stow kitty"
 echo "    cd ~/dotfiles && stow tmux"
+echo "    cd ~/dotfiles && stow wsl"
 echo "Note: keyd config is deployed via setup.sh keyd (symlinked to /etc/keyd/), not stow."
 echo
 echo ">>> Log out and log back in to start i3 (or restart i3 with \$mod+Shift+r)."
