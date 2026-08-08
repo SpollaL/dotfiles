@@ -69,6 +69,10 @@ switch_tab = "prefix+1..9"
 close_pane = "prefix+x"
 zoom = "prefix+z"
 
+# tmux `prefix [` enters copy mode (setw -g mode-keys vi).
+# Undocumented in `herdr --default-config`, but a real action.
+copy_mode = "prefix+["
+
 # bind-key f display-popup -E "tmux-sessionizer"
 [[keys.command]]
 key = "prefix+f"

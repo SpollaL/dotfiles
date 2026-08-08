@@ -76,6 +76,7 @@ Prefix is `C-s` in both.
 | `prefix x` / `prefix z`     | same                 | herdr defaults already match                                 |
 | `prefix &` kill window      | `prefix X`           | tmux's `&` is shifted punctuation; herdr's default is safer  |
 | `prefix %` / `prefix "`     | `prefix v` / `prefix -` | Same reason                                                  |
+| `prefix [` copy mode        | `prefix [`           | `copy_mode`, undocumented in `--default-config` but valid    |
 
 ## Settings
 
@@ -102,8 +103,10 @@ Things the tmux config did that herdr has no equivalent for:
   seamless prefix-less handoff between nvim splits and herdr panes.
 - **tmux-battery / tmux-online-status / clock.** The sidebar has no status-bar
   segments for battery, connectivity, or the date.
-- **Copy mode.** No `prefix [` with vi motions; herdr has `prefix e`
-  (`edit_scrollback`) and mouse selection instead.
+
+Note that `herdr --default-config` does not list every bindable action —
+`copy_mode` and `swap_pane_*` are real but undocumented. `herdr config check`
+is the authority: it reports `unknown config key` for anything that is not.
 
 Intentional divergences from tmux:
 
