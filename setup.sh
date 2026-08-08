@@ -145,13 +145,22 @@ install_tmux() {
   fi
 }
 
+install_herdr() {
+  echo ">>> Installing herdr..."
+  curl -fsSL https://herdr.dev/install.sh | sh
+
+  # herdr-sessionizer and work-project.sh drive herdr through its JSON socket API.
+  sudo apt install -y fzf jq
+}
+
 usage() {
-  echo "Usage: $0 [all|nvim|i3|molten|keyd]"
+  echo "Usage: $0 [all|nvim|i3|molten|keyd|herdr]"
   echo "  all     Install everything"
   echo "  nvim    Install Neovim and its dependencies"
   echo "  i3      Install i3, polybar, and rofi"
   echo "  molten  Set up the Neovim Python environment for molten"
   echo "  keyd    Install keyd and deploy keyboard layout"
+  echo "  herdr   Install herdr and its script dependencies"
   exit 1
 }
 
@@ -171,10 +180,14 @@ main() {
       install_kitty
       install_lazygit
       install_tmux
+      install_herdr
       install_keyd
       ;;
     keyd)
       install_keyd
+      ;;
+    herdr)
+      install_herdr
       ;;
     nvim)
       sudo apt-get update
@@ -215,6 +228,7 @@ echo "    cd ~/dotfiles && stow rofi"
 echo "    cd ~/dotfiles && stow nvim"
 echo "    cd ~/dotfiles && stow kitty"
 echo "    cd ~/dotfiles && stow tmux"
+echo "    cd ~/dotfiles && stow herdr"
 echo "Note: keyd config is deployed via setup.sh keyd (symlinked to /etc/keyd/), not stow."
 echo
 echo ">>> Log out and log back in to start i3 (or restart i3 with \$mod+Shift+r)."

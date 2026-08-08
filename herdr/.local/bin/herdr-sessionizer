@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# herdr port of tmux-sessionizer: fuzzy-pick a project directory, then focus the
+# matching herdr workspace or create it. Bound to prefix+f as a popup command.
+set -euo pipefail
+
+export PATH="$HOME/.fzf/bin:$HOME/.local/bin:$PATH"
+
+if [[ $# -eq 1 ]]; then
+  selected=$1
+else
+  selected=$(find \
+    ~/workspace \
+    ~/workspace/work-monorepo \
+    ~/workspace/personal \
+    ~/dotfiles \
+    -mindepth 1 -maxdepth 1 -type d 2>/dev/null | fzf)
+fi
+
+if [[ -z $selected ]]; then
+  exit 0
+fi
+
+label=$(basename "$selected" | tr . _)
+
+existing=$(herdr workspace list |
+  jq -r --arg label "$label" \
+    'first(.result.workspaces[] | select(.label == $label) | .workspace_id) // empty')
+
+if [[ -n $existing ]]; then
+  herdr workspace focus "$existing" >/dev/null
+  exit 0
+fi
+
+workspace=$(herdr workspace create --cwd "$selected" --label "$label" --focus |
+  jq -r '.result.workspace.workspace_id')
+
+if [[ $label == "work-monorepo" ]]; then
+  "$HOME/.config/herdr/scripts/work-project.sh" "$workspace"
+fi

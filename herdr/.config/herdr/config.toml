@@ -1,0 +1,124 @@
+# herdr configuration — ported from tmux/.tmux.conf
+#
+# Concept map:  tmux session -> herdr workspace
+#               tmux window  -> herdr tab
+#               tmux pane    -> herdr pane
+#
+# See herdr/README.md for the full tmux -> herdr mapping and the known gaps.
+# `herdr --default-config` prints every available option with its default.
+
+onboarding = false
+
+[theme]
+# tmux ran catppuccin with @catppuccin_flavor "macchiato". herdr's built-in
+# catppuccin is the mocha flavour, so the macchiato palette is layered on top
+# via [theme.custom].
+name = "catppuccin"
+auto_switch = false
+
+[theme.custom]
+panel_bg = "#24273a" # base
+text = "#cad3f5"
+subtext0 = "#a5adcb"
+surface0 = "#363a4f"
+surface1 = "#494d64"
+overlay0 = "#6e738d"
+overlay1 = "#8087a2"
+red = "#ed8796"
+green = "#a6da95"
+yellow = "#eed49f"
+blue = "#8aadf4"
+teal = "#8bd5ca"
+peach = "#f5a97f"
+mauve = "#c6a0f6"
+# tmux highlighted the active window with bg=@thm_peach.
+accent = "#f5a97f"
+
+[keys]
+# set -g prefix C-s
+prefix = "ctrl+s"
+
+# bind r source-file ~/.tmux.conf
+# Takes prefix+r from resize_mode, which moves to prefix+shift+r.
+reload_config = "prefix+r"
+resize_mode = "prefix+shift+r"
+
+# tmux `prefix d` detaches; herdr defaults to prefix+q.
+detach = "prefix+d"
+
+# bind-key h/j/k/l select-pane -L/-D/-U/-R
+focus_pane_left = "prefix+h"
+focus_pane_down = "prefix+j"
+focus_pane_up = "prefix+k"
+focus_pane_right = "prefix+l"
+
+# bind-key T display-popup -E "tmux list-sessions | fzf | xargs tmux switch-client"
+# herdr's native workspace picker replaces the fzf popup (it can also close a
+# workspace in place, which the popup did with ctrl-d).
+workspace_picker = "prefix+shift+t"
+
+# tmux `prefix ,` renames the current window; frees prefix+shift+t above.
+rename_tab = "prefix+comma"
+
+# tmux `prefix c` / `prefix n` / `prefix p` / `prefix 1..9` — same as herdr's
+# defaults, pinned here so a future default change does not move them.
+new_tab = "prefix+c"
+next_tab = "prefix+n"
+previous_tab = "prefix+p"
+switch_tab = "prefix+1..9"
+close_pane = "prefix+x"
+zoom = "prefix+z"
+
+# bind-key f display-popup -E "tmux-sessionizer"
+[[keys.command]]
+key = "prefix+f"
+type = "popup"
+command = "herdr-sessionizer"
+width = "80%"
+height = "80%"
+
+[terminal]
+# tmux inherited $SHELL for new panes.
+default_shell = ""
+
+[ui]
+# tmux created windows immediately with an automatic name
+# (`set -wg automatic-rename on`), it never prompted.
+prompt_new_tab_name = false
+
+# setw -g pane-border-lines single
+pane_borders = true
+
+# set -g set-clipboard on
+copy_on_select = true
+
+# tmux status-left showed the session name, then the running command, then the
+# short cwd. The sidebar is the closest equivalent: spaces carry the session
+# identity, agent rows carry the per-pane command.
+[ui.sidebar.spaces]
+row_gap = 0
+rows = [
+  ["state_icon", { token = "workspace", fg = "#a6da95", bold = true }],
+  [{ token = "branch", fg = "#8aadf4" }, "git_status"],
+]
+
+[ui.sidebar.agents]
+row_gap = 0
+rows = [
+  ["state_icon", { token = "workspace", fg = "#f5a97f" }, "tab"],
+  [{ token = "agent", fg = "#ee99a0" }],
+]
+
+[session]
+# Stands in for tmux-resurrect/tmux-continuum (@continuum-restore 'on').
+# Note this restores agent panes into their own sessions rather than re-running
+# saved shell commands — which is what @resurrect-processes 'false' was avoiding.
+resume_agents_on_restore = true
+
+[experimental]
+# set -gq allow-passthrough on — lets image.nvim drive the Kitty graphics
+# protocol from inside a managed pane.
+kitty_graphics = true
+
+# tmux-resurrect also restored pane contents.
+pane_history = true

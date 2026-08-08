@@ -35,6 +35,7 @@ Each top-level directory is a stow package that mirrors the user's home director
 - `nvim/.config/nvim/` → `~/.config/nvim`
 - `bash/.bashrc` → `~/.bashrc`
 - `tmux/.tmux.conf` → `~/.tmux.conf`
+- `herdr/.config/herdr/` → `~/.config/herdr` (tmux port; see `herdr/README.md`)
 
 ### Neovim Configuration
 - **Entry point**: `nvim/.config/nvim/init.lua` loads `vim-options.lua` and `config/lazy.lua`
