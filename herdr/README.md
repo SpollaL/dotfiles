@@ -16,6 +16,18 @@ Deploys `~/.config/herdr/config.toml`, `~/.config/herdr/scripts/work-project.sh`
 and `~/.local/bin/herdr-sessionizer`. Validate the config with
 `herdr config check`; apply it to a running server with `herdr server reload-config`.
 
+## Sessionizer
+
+`prefix+f` fuzzy-picks a project directory and focuses its workspace, or creates
+one. New workspaces get nvim in the root pane at 65% and a shell in the smaller
+split to its right; `work-monorepo` delegates to `work-project.sh` for its
+multi-tab layout instead. A `.venv` or `venv` in the project is activated before
+nvim starts, so the LSP resolves the project interpreter and the shell nvim exits
+back to stays activated. Existing workspaces are only focused, never relaid out.
+
+Workspaces are matched by label, not id — herdr recycles workspace ids as
+workspaces close.
+
 ## Shell integration
 
 herdr runs one shell per pane, so anything `~/.bashrc` auto-starts ends up

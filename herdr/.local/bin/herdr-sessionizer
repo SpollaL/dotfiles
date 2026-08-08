@@ -5,6 +5,25 @@ set -euo pipefail
 
 export PATH="$HOME/.fzf/bin:$HOME/.local/bin:$PATH"
 
+# Default layout for a new workspace: nvim in the root pane, shell in a smaller
+# split to its right. --ratio sizes the source pane, not the new one.
+# A project venv is activated ahead of nvim so its LSP resolves the project's
+# interpreter, and so the shell nvim exits back to stays activated. uv creates
+# .venv; venv/ is the older convention.
+default_layout() {
+  local pane=$1 dir=$2 cmd="nvim ." venv
+  herdr pane split "$pane" --direction right --ratio 0.65 --cwd "$dir" --no-focus >/dev/null
+  for venv in .venv venv; do
+    if [[ -f $dir/$venv/bin/activate ]]; then
+      cmd="source $venv/bin/activate && $cmd"
+      break
+    fi
+  done
+  # pane run joins its arguments with spaces and types the result into the
+  # pane's shell without preserving quoting, so the line must arrive as one arg.
+  herdr pane run "$pane" "$cmd"
+}
+
 if [[ $# -eq 1 ]]; then
   selected=$1
 else
@@ -31,9 +50,14 @@ if [[ -n $existing ]]; then
   exit 0
 fi
 
-workspace=$(herdr workspace create --cwd "$selected" --label "$label" --focus |
-  jq -r '.result.workspace.workspace_id')
+IFS=$'\t' read -r workspace pane < <(
+  herdr workspace create --cwd "$selected" --label "$label" --focus |
+    jq -r '[.result.workspace.workspace_id, .result.root_pane.pane_id] | @tsv'
+)
 
+# work-project brings its own multi-tab layout; everything else gets the default.
 if [[ $label == "work-monorepo" ]]; then
   "$HOME/.config/herdr/scripts/work-project.sh" "$workspace"
+else
+  default_layout "$pane" "$selected"
 fi
