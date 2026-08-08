@@ -95,12 +95,42 @@ herdr's built-in catppuccin is the mocha flavour, so `[theme.custom]` layers the
 macchiato palette on top. Only the tokens herdr exposes are overridable —
 `herdr config check` reports any that are not.
 
+## Plugins
+
+`herdr plugin` is a real subcommand even though `herdr --help` does not list it.
+Plugins install from GitHub; the marketplace at <https://herdr.dev/plugins> is
+populated automatically from the `herdr-plugin` topic.
+
+```bash
+herdr plugin install paulbkim-dev/vim-herdr-navigation
+```
+
+Replaces **vim-tmux-navigator**: prefix-less `ctrl+h/j/k/l` crosses nvim splits
+and herdr panes as one surface. Two halves that have to agree —
+
+- herdr side: the four `type = "plugin_action"` bindings in `config.toml`. The
+  plugin checks the focused pane's foreground process and either forwards the
+  chord into the pane (nvim) or moves herdr's focus (anything else).
+- editor side: `nvim/.config/nvim/after/plugin/herdr-nav.lua`, vendored from the
+  plugin rather than `dofile`'d out of herdr's checkout so the nvim package stays
+  portable and degrades to plain `wincmd` where herdr is absent. `after/plugin`
+  loads late enough to beat vim-tmux-navigator, whose own `<c-hjkl>` maps are
+  removed from its lazy spec; its `TmuxNavigate*` commands stay as the `$TMUX`
+  fallback.
+
+Install unpinned. The `v0.1.0` tag detects and focuses with `herdr pane
+process-info --current` / `pane focus --current`, which resolve to the server's
+globally focused pane instead of the pane the key fired from — so it moves the
+wrong pane. Fixed after the tag. `.plugins.lock` records the resolved commit, so
+an unpinned install is still reproducible.
+
+Trade-off inherited from tmux: `ctrl+l` and `ctrl+k` no longer reach readline
+(clear screen, kill line) in non-nvim panes.
+
 ## Gaps
 
 Things the tmux config did that herdr has no equivalent for:
 
-- **vim-tmux-navigator.** `prefix h/j/k/l` moves between panes, but there is no
-  seamless prefix-less handoff between nvim splits and herdr panes.
 - **tmux-battery / tmux-online-status / clock.** The sidebar has no status-bar
   segments for battery, connectivity, or the date.
 

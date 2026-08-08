@@ -81,6 +81,41 @@ command = "herdr-sessionizer"
 width = "80%"
 height = "80%"
 
+# vim-tmux-navigator, ported: prefix-less ctrl+h/j/k/l crosses nvim splits and
+# herdr panes as one surface. The plugin forwards the chord into the pane when
+# nvim holds the foreground and moves herdr's focus otherwise.
+#   herdr plugin install paulbkim-dev/vim-herdr-navigation
+# Install unpinned: the v0.1.0 tag resolves the focused pane with --current,
+# which is the server's globally focused pane rather than the one the key fired
+# from, so it drives the wrong pane. Fixed after the tag; herdr records the
+# resolved commit in .plugins.lock either way.
+# Editor half lives in nvim/.config/nvim/after/plugin/herdr-nav.lua.
+# Shadows readline ctrl+l (clear) and ctrl+k (kill line) in non-nvim panes —
+# the same trade-off tmux made.
+[[keys.command]]
+key = "ctrl+h"
+type = "plugin_action"
+command = "vim-herdr-navigation.left"
+description = "navigate left (vim/herdr)"
+
+[[keys.command]]
+key = "ctrl+j"
+type = "plugin_action"
+command = "vim-herdr-navigation.down"
+description = "navigate down (vim/herdr)"
+
+[[keys.command]]
+key = "ctrl+k"
+type = "plugin_action"
+command = "vim-herdr-navigation.up"
+description = "navigate up (vim/herdr)"
+
+[[keys.command]]
+key = "ctrl+l"
+type = "plugin_action"
+command = "vim-herdr-navigation.right"
+description = "navigate right (vim/herdr)"
+
 [terminal]
 # tmux inherited $SHELL for new panes.
 default_shell = ""

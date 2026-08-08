@@ -7,10 +7,8 @@ vim.cmd("set clipboard+=unnamedplus")
 vim.opt.swapfile = false
 vim.wo.number = true
 
-vim.keymap.set("n", "<C-k>", ":wincmd k<CR>")
-vim.keymap.set("n", "<C-j>", ":wincmd j<CR>")
-vim.keymap.set("n", "<C-h>", ":wincmd h<CR>")
-vim.keymap.set("n", "<C-l>", ":wincmd l<CR>")
+-- <C-h/j/k/l> window motion lives in after/plugin/herdr-nav.lua, which also
+-- crosses out into herdr panes at a split edge.
 
 -- Exit terminal mode with Ctrl-Q
 vim.keymap.set("t", "<C-q>", "<C-\\><C-n>", { desc = "Exit terminal mode" })
