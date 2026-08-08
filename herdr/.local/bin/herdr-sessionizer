@@ -24,15 +24,22 @@ default_layout() {
   herdr pane run "$pane" "$cmd"
 }
 
+# Directories to offer, one absolute path per line in ~/.config/sessionizer/roots
+# (machine-local, so private project paths stay out of this repo).
+search_roots() {
+  local file="$HOME/.config/sessionizer/roots"
+  if [[ -f $file ]]; then
+    grep -Ev '^\s*(#|$)' "$file"
+  else
+    printf '%s\n' "$HOME/workspace" "$HOME/dotfiles"
+  fi
+}
+
 if [[ $# -eq 1 ]]; then
   selected=$1
 else
-  selected=$(find \
-    ~/workspace \
-    ~/workspace/work-monorepo \
-    ~/workspace/personal \
-    ~/dotfiles \
-    -mindepth 1 -maxdepth 1 -type d 2>/dev/null | fzf)
+  mapfile -t roots < <(search_roots)
+  selected=$(find "${roots[@]}" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | fzf)
 fi
 
 if [[ -z $selected ]]; then
@@ -55,9 +62,11 @@ IFS=$'\t' read -r workspace pane < <(
     jq -r '[.result.workspace.workspace_id, .result.root_pane.pane_id] | @tsv'
 )
 
-# work-project brings its own multi-tab layout; everything else gets the default.
-if [[ $label == "work-monorepo" ]]; then
-  "$HOME/.config/herdr/scripts/work-project.sh" "$workspace"
+# A project can ship its own multi-tab layout as ~/.config/herdr/layouts/<label>.sh,
+# taking the workspace id as $1; everything else gets the default.
+layout="$HOME/.config/herdr/layouts/$label.sh"
+if [[ -x $layout ]]; then
+  "$layout" "$workspace"
 else
   default_layout "$pane" "$selected"
 fi

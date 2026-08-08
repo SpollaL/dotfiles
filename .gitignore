@@ -1,5 +1,8 @@
-# ignore artifcats, local secrets
+# ignore artifacts, local secrets
 secrets/*
 *.swp
 *.swo
 *.pyc
+
+# machine-local agent settings — contain absolute paths and per-host allowlists
+**/.claude/settings.local.json

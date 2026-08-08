@@ -12,18 +12,24 @@ cd ~/dotfiles && stow herdr
 herdr writes its sockets and logs into `~/.config/herdr/`, so stow folds the
 package into that existing directory rather than replacing it.
 
-Deploys `~/.config/herdr/config.toml`, `~/.config/herdr/scripts/work-project.sh`
-and `~/.local/bin/herdr-sessionizer`. Validate the config with
-`herdr config check`; apply it to a running server with `herdr server reload-config`.
+Deploys `~/.config/herdr/config.toml` and `~/.local/bin/herdr-sessionizer`.
+Validate the config with `herdr config check`; apply it to a running server with
+`herdr server reload-config`.
 
 ## Sessionizer
 
 `prefix+f` fuzzy-picks a project directory and focuses its workspace, or creates
 one. New workspaces get nvim in the root pane at 65% and a shell in the smaller
-split to its right; `work-monorepo` delegates to `work-project.sh` for its
-multi-tab layout instead. A `.venv` or `venv` in the project is activated before
-nvim starts, so the LSP resolves the project interpreter and the shell nvim exits
-back to stays activated. Existing workspaces are only focused, never relaid out.
+split to its right. A `.venv` or `venv` in the project is activated before nvim
+starts, so the LSP resolves the project interpreter and the shell nvim exits back
+to stays activated. Existing workspaces are only focused, never relaid out.
+
+The directories offered are read from `~/.config/sessionizer/roots`, one absolute
+path per line, defaulting to `~/workspace` and `~/dotfiles`. A project that wants
+a multi-tab layout instead of the default supplies an executable
+`~/.config/herdr/layouts/<dir-name>.sh`, which receives the new workspace id as
+`$1`. Both paths are machine-local and deliberately outside this repo, so private
+project names and layouts never land in version control.
 
 Workspaces are matched by label, not id — herdr recycles workspace ids as
 workspaces close.

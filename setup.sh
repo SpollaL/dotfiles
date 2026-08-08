@@ -149,7 +149,7 @@ install_herdr() {
   echo ">>> Installing herdr..."
   curl -fsSL https://herdr.dev/install.sh | sh
 
-  # herdr-sessionizer and work-project.sh drive herdr through its JSON socket API.
+  # herdr-sessionizer and layout scripts drive herdr through its JSON socket API.
   sudo apt install -y fzf jq
 }
 

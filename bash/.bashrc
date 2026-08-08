@@ -157,7 +157,7 @@ export ANDROID_HOME=$HOME/android-sdk
 export PATH=$PATH:$ANDROID_HOME/cmdline-tools/latest/bin:$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator
 
 # opencode
-export PATH=/home/user/.opencode/bin:$PATH
+export PATH=$HOME/.opencode/bin:$PATH
 # Auto-attach to tmux on terminal open
 if command -v tmux &>/dev/null && [ -z "$TMUX" ]; then
   tmux attach 2>/dev/null || tmux new-session -s main

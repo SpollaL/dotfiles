@@ -2,15 +2,22 @@
 
 export PATH="$HOME/.fzf/bin:$HOME/.local/bin:$PATH"
 
+# Directories to offer, one absolute path per line in ~/.config/sessionizer/roots
+# (machine-local, so private project paths stay out of this repo).
+search_roots() {
+    local file="$HOME/.config/sessionizer/roots"
+    if [[ -f $file ]]; then
+        grep -Ev '^\s*(#|$)' "$file"
+    else
+        printf '%s\n' "$HOME/workspace" "$HOME/dotfiles"
+    fi
+}
+
 if [[ $# -eq 1 ]]; then
     selected=$1
 else
-    selected=$(find \
-        ~/workspace \
-        ~/workspace/work-monorepo \
-        ~/workspace/personal \
-        ~/dotfiles \
-        -mindepth 1 -maxdepth 1 -type d 2>/dev/null | fzf)
+    mapfile -t roots < <(search_roots)
+    selected=$(find "${roots[@]}" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | fzf)
 fi
 
 [[ -z $selected ]] && exit 0
@@ -20,8 +27,10 @@ selected_name=$(basename "$selected" | tr . _)
 if ! tmux has-session -t="$selected_name" 2>/dev/null; then
     tmux new-session -ds "$selected_name" -c "$selected"
 
-    if [[ "$selected_name" == "work-monorepo" ]]; then
-        tmux send-keys -t "$selected_name" "~/.config/tmux/scripts/work-project.sh" Enter
+    # A project can ship its own layout as ~/.config/tmux/layouts/<name>.sh.
+    layout="$HOME/.config/tmux/layouts/$selected_name.sh"
+    if [[ -x "$layout" ]]; then
+        tmux send-keys -t "$selected_name" "$layout" Enter
     fi
 fi
 
