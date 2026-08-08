@@ -16,6 +16,28 @@ Deploys `~/.config/herdr/config.toml`, `~/.config/herdr/scripts/work-project.sh`
 and `~/.local/bin/herdr-sessionizer`. Validate the config with
 `herdr config check`; apply it to a running server with `herdr server reload-config`.
 
+## Shell integration
+
+herdr runs one shell per pane, so anything `~/.bashrc` auto-starts ends up
+running *inside* herdr. The old tmux auto-attach did exactly that and produced
+tmux-inside-herdr (`HERDR_PANE_ID` and `TMUX` both set, `TERM_PROGRAM=tmux`).
+
+`~/.bashrc` now attaches herdr instead, guarded so it never nests:
+
+```bash
+# Auto-attach to herdr on terminal open.
+# HERDR_PANE_ID skips this inside a herdr pane (herdr does not nest);
+# TMUX skips it inside a tmux pane, if tmux is ever started by hand.
+if command -v herdr &>/dev/null \
+   && [ -z "$HERDR_PANE_ID" ] && [ -z "$TMUX" ]; then
+  exec herdr
+fi
+```
+
+This lives in the live `~/.bashrc` only — the `bash` package in this repo is not
+stowed and still carries the old tmux auto-attach. `exec` means quitting herdr
+closes the terminal; if herdr ever fails to start, recover with `kitty bash --norc`.
+
 ## Concept map
 
 | tmux    | herdr     |
