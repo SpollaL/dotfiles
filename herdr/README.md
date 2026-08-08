@@ -30,13 +30,27 @@ tmux-inside-herdr (`HERDR_PANE_ID` and `TMUX` both set, `TERM_PROGRAM=tmux`).
 # TMUX skips it inside a tmux pane, if tmux is ever started by hand.
 if command -v herdr &>/dev/null \
    && [ -z "$HERDR_PANE_ID" ] && [ -z "$TMUX" ]; then
-  exec herdr
+  herdr
 fi
 ```
 
+Deliberately not `exec herdr` — detaching (`Ctrl-s d`) then drops back to a
+shell instead of closing the terminal window, and a herdr that fails to start
+leaves a usable shell rather than a window that dies on open.
+
 This lives in the live `~/.bashrc` only — the `bash` package in this repo is not
-stowed and still carries the old tmux auto-attach. `exec` means quitting herdr
-closes the terminal; if herdr ever fails to start, recover with `kitty bash --norc`.
+stowed and still carries the old tmux auto-attach.
+
+## Quitting
+
+herdr's "session" is the persistent server (`default`), not the tmux-session
+equivalent — that is a workspace.
+
+| Intent                          | How                                        |
+| ------------------------------- | ------------------------------------------ |
+| Detach, leave everything running | `Ctrl-s d` (tmux `prefix d`; herdr's own default is `prefix+q`) |
+| Close one workspace             | `Ctrl-s D`, or `herdr workspace close <id>` |
+| Stop everything                 | `herdr server stop` (tmux `kill-server`)   |
 
 ## Concept map
 
