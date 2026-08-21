@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Interactive git + GitHub dashboard for a tree of sibling repositories.
 #
-# Rows are your open PRs, PRs awaiting your review, and the repos themselves.
+# Rows are your open PRs, open PRs you are a reviewer on, and the repos
+# themselves.
 # Enter opens a row on github.com, ctrl-o opens its repo in a new herdr tab,
 # ctrl-u fast-forwards that repo's checked-out branch — which is the local
 # branch, not the row's PR branch, on every row type.
@@ -13,7 +14,7 @@ export PATH="$HOME/.fzf/bin:$HOME/.local/bin:$PATH"
 
 # Column widths, shared by the bash and jq row builders so the three row types
 # line up in the picker.
-W_REPO=28 W_NUM=6 W_CI=6 W_DEC=11 W_AGE=4 W_STATE=9
+W_REPO=28 W_NUM=6 W_CI=6 W_DEC=11 W_AGE=4 W_STATE=9 W_WHO=20
 
 # Fixed-width cell. Long branch and repo names are common enough that letting
 # one overflow would shift every column to its right.
@@ -84,21 +85,26 @@ local_rows() {
 }
 
 read -r -d '' GQL <<'EOF' || true
-query($mine: String!, $reviews: String!) {
+query($mine: String!, $requested: String!, $reviewed: String!) {
+  viewer { login }
   mine: search(query: $mine, type: ISSUE, first: 100) {
+    nodes { ... on PullRequest { ...prBits reviewDecision } }
+  }
+  requested: search(query: $requested, type: ISSUE, first: 100) {
+    nodes { ... on PullRequest { ...prBits } }
+  }
+  reviewed: search(query: $reviewed, type: ISSUE, first: 100) {
     nodes { ... on PullRequest {
-      number title url isDraft createdAt mergeable reviewDecision
-      repository { name }
-      commits(last: 1) { nodes { commit { statusCheckRollup { state } } } }
+      ...prBits
+      latestReviews(first: 20) { nodes { author { login } state } }
     } }
   }
-  reviews: search(query: $reviews, type: ISSUE, first: 100) {
-    nodes { ... on PullRequest {
-      number title url isDraft createdAt mergeable
-      repository { name }
-      author { login }
-    } }
-  }
+}
+fragment prBits on PullRequest {
+  number title url isDraft createdAt mergeable
+  repository { name }
+  author { login }
+  commits(last: 1) { nodes { commit { statusCheckRollup { state } } } }
 }
 EOF
 
@@ -116,38 +122,59 @@ def ci_mark:
   elif . == "FAILURE" or . == "ERROR" then ("FAIL" | pad($ci) | paint(31))
   elif . == "PENDING" then ("run" | pad($ci) | paint(33))
   else ("no ci" | pad($ci) | paint(90)) end;
+# REVIEW column on a PR row: where the PR as a whole stands.
 def dec_mark:
   if . == "APPROVED" then ("approved" | pad($dec) | paint(32))
   elif . == "CHANGES_REQUESTED" then ("CHANGES" | pad($dec) | paint(31))
   elif . == "REVIEW_REQUIRED" then ("pending" | pad($dec) | paint(90))
   else ("no review" | pad($dec) | paint(90)) end;
+# REVIEW column on a REV row: where *you* stand. GitHub drops the review request
+# the moment you submit, so anything past "requested" would otherwise vanish from
+# the board while the PR is still open and still yours to follow.
+def my_mark:
+  if . == "REQUESTED" then ("requested" | pad($dec) | paint(93))
+  elif . == "APPROVED" then ("approved" | pad($dec) | paint(32))
+  elif . == "CHANGES_REQUESTED" then ("CHANGES" | pad($dec) | paint(31))
+  elif . == "COMMENTED" then ("commented" | pad($dec) | paint(36))
+  else ("reviewed" | pad($dec) | paint(90)) end;
 def flags:
   [ (if .isDraft then ("draft" | paint(90)) else empty end),
     (if .mergeable == "CONFLICTING" then ("CONFLICT" | paint(31)) else empty end)
   ] | join(" ");
+def ci_cell: ((.commits.nodes[0].commit.statusCheckRollup.state // "") | ci_mark);
+def key: "\(.repository.name)#\(.number)";
+def rev_row($state):
+  [ "REV", ($dirs[.repository.name] // ""), .url,
+    ( ("REV" | pad(4) | paint(33)) + " "
+      + (.repository.name | cell($repo)) + " "
+      + ("#\(.number)" | pad($num) | paint(90)) + " "
+      + ci_cell + " "
+      + ($state | my_mark) + " "
+      + (.createdAt | age | pad($agew) | paint(90)) + " "
+      + ((.author.login // "?") | cell($who) | paint(36)) + " "
+      + .title + " " + flags )
+  ] | @tsv;
 
-( .data.mine.nodes[]
-  | .repository.name as $r
-  | [ "PR", ($dirs[$r] // ""), .url,
-      ( ("PR" | pad(4) | paint(35)) + " "
-        + ($r | cell($repo)) + " "
-        + ("#\(.number)" | pad($num) | paint(90)) + " "
-        + ((.commits.nodes[0].commit.statusCheckRollup.state // "") | ci_mark) + " "
-        + ((.reviewDecision // "") | dec_mark) + " "
-        + (.createdAt | age | pad($agew) | paint(90)) + " "
-        + .title + " " + flags )
-    ] | @tsv
-),
-( .data.reviews.nodes[]
-  | .repository.name as $r
-  | [ "REV", ($dirs[$r] // ""), .url,
-      ( ("REV" | pad(4) | paint(33)) + " "
-        + ($r | cell($repo)) + " "
-        + ("#\(.number)" | pad($num) | paint(90)) + " "
-        + ((.author.login // "?") | cell($ci + $dec + 1) | paint(36)) + " "
-        + (.createdAt | age | pad($agew) | paint(90)) + " "
-        + .title + " " + flags )
-    ] | @tsv
+.data as $d
+| $d.viewer.login as $me
+| ([$d.requested.nodes[] | key] | map({(.): true}) | add // {}) as $pending
+| (
+  ( $d.mine.nodes[]
+    | [ "PR", ($dirs[.repository.name] // ""), .url,
+        ( ("PR" | pad(4) | paint(35)) + " "
+          + (.repository.name | cell($repo)) + " "
+          + ("#\(.number)" | pad($num) | paint(90)) + " "
+          + ci_cell + " "
+          + ((.reviewDecision // "") | dec_mark) + " "
+          + (.createdAt | age | pad($agew) | paint(90)) + " "
+          + .title + " " + flags )
+      ] | @tsv
+  ),
+  ( $d.requested.nodes[] | rev_row("REQUESTED") ),
+  ( $d.reviewed.nodes[]
+    | select($pending[key] | not)
+    | rev_row([.latestReviews.nodes[]? | select(.author.login == $me) | .state] | first // "REVIEWED")
+  )
 )
 EOF
 
@@ -162,10 +189,11 @@ remote_rows() {
 
   gh api graphql -f query="$GQL" \
     -f mine="is:pr is:open author:@me$scope" \
-    -f reviews="is:pr is:open review-requested:@me$scope" |
+    -f requested="is:pr is:open review-requested:@me$scope" \
+    -f reviewed="is:pr is:open reviewed-by:@me$scope" |
     jq -r --argjson dirs "$dirs" \
       --argjson repo "$W_REPO" --argjson num "$W_NUM" --argjson ci "$W_CI" \
-      --argjson dec "$W_DEC" --argjson agew "$W_AGE" "$JQ"
+      --argjson dec "$W_DEC" --argjson agew "$W_AGE" --argjson who "$W_WHO" "$JQ"
 }
 
 # All rows as "<type>\t<dir>\t<url>\t<display>". Also the ctrl-r reload target,
@@ -212,14 +240,15 @@ ROOT=$(cd "${1:-$PWD}" && pwd)
 SELF=$(realpath "$0")
 
 # Keys, what each row type means, and column titles positioned with the same
-# widths the rows use. The titles describe PR and REV rows; a REPO row spends
-# the PR#/CI/REVIEW span on its branch and the AGE/TITLE span on tree and drift.
+# widths the rows use. The titles describe PR rows; a REV row inserts its author
+# ahead of the title, and a REPO row spends the PR#/CI/REVIEW span on its branch
+# and the AGE/TITLE span on tree and drift.
 read -r -d '' HEADER <<EOF || true
 enter open on GitHub    ctrl-u fast-forward    ctrl-o repo in new tab    ctrl-r refresh
-PR your pull request    REV waiting on your review    REPO local checkout
+PR yours    REV you are a reviewer, REVIEW is your own verdict    REPO local checkout
 $(printf '%-4s %-*s %-*s %-*s %-*s %-*s %s' \
   TYPE "$W_REPO" REPO "$W_NUM" PR# "$W_CI" CI "$W_DEC" REVIEW "$W_AGE" AGE \
-  'TITLE          (REPO: branch, working tree, drift)')
+  'TITLE  (REV: author first; REPO: branch, working tree, drift)')
 EOF
 
 emit_rows "$ROOT" | fzf \
