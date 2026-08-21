@@ -1,0 +1,209 @@
+#!/usr/bin/env bash
+# Interactive git + GitHub dashboard for a tree of sibling repositories.
+#
+# Rows are your open PRs, PRs awaiting your review, and the repos themselves.
+# Enter opens a row on github.com, ctrl-o opens its repo in a new herdr tab.
+# Scope is whatever is checked out under ROOT, so PRs in repos you do not have
+# locally stay out of the way.
+set -euo pipefail
+
+export PATH="$HOME/.fzf/bin:$HOME/.local/bin:$PATH"
+
+# Column widths, shared by the bash and jq row builders so the three row types
+# line up in the picker.
+W_REPO=28 W_NUM=6 W_CI=6 W_DEC=11 W_AGE=4
+
+# Fixed-width cell. Long branch and repo names are common enough that letting
+# one overflow would shift every column to its right.
+cell() {
+  local s=$1 w=$2
+  ((${#s} > w)) && s="${s:0:w-1}~"
+  printf '%-*s' "$w" "$s"
+}
+
+# owner/name from a remote URL, for both the ssh and https forms.
+name_with_owner() {
+  sed -E 's#\.git$##; s#^.*[:/]([^:/]+/[^:/]+)$#\1#' <<<"$1"
+}
+
+# Every repo in the tree — ROOT itself plus its immediate children — as
+# "<dir>\t<owner/name>". Directories without an origin remote are skipped.
+repos() {
+  local root=$1 dir url
+  for dir in "$root" "$root"/*/; do
+    dir=${dir%/}
+    [[ -d $dir/.git ]] || continue
+    url=$(git -C "$dir" remote get-url origin 2>/dev/null) || continue
+    printf '%s\t%s\n' "$dir" "$(name_with_owner "$url")"
+  done
+}
+
+# Refresh remote-tracking refs without making the picker wait on one SSH
+# round-trip per repo. Counts converge by the time you hit ctrl-r.
+background_fetch() {
+  local dir
+  while IFS=$'\t' read -r dir _; do
+    (git -C "$dir" fetch --quiet --all --prune >/dev/null 2>&1 &)
+  done
+}
+
+# REPO rows: current branch, uncommitted files, and drift from the upstream as
+# of the last fetch.
+local_rows() {
+  local dir nwo branch dirty counts behind ahead state drift
+  while IFS=$'\t' read -r dir nwo; do
+    branch=$(git -C "$dir" branch --show-current)
+    [[ -n $branch ]] || branch='(detached)'
+    dirty=$(git -C "$dir" status --porcelain | wc -l)
+
+    if [[ $dirty -gt 0 ]]; then
+      state=$(printf '\033[33m%-6s\033[0m' "*$dirty")
+    else
+      state=$(printf '\033[90m%-6s\033[0m' clean)
+    fi
+
+    drift=""
+    if counts=$(git -C "$dir" rev-list --left-right --count '@{upstream}...HEAD' 2>/dev/null); then
+      read -r behind ahead <<<"$counts"
+      [[ $ahead -gt 0 ]] && drift+=$(printf '\033[32m^%s\033[0m ' "$ahead")
+      [[ $behind -gt 0 ]] && drift+=$(printf '\033[31mv%s\033[0m' "$behind")
+    else
+      drift=$(printf '\033[90mno upstream\033[0m')
+    fi
+
+    printf '%s\t%s\t%s\t%s %s %s %s %s\n' \
+      REPO "$dir" "https://github.com/$nwo" \
+      "$(printf '\033[90m%-4s\033[0m' REPO)" \
+      "$(cell "${nwo##*/}" "$W_REPO")" \
+      "$(printf '\033[36m%s\033[0m' "$(cell "$branch" $((W_NUM + W_CI + W_DEC + 2)))")" \
+      "$state" "$drift"
+  done
+}
+
+read -r -d '' GQL <<'EOF' || true
+query($mine: String!, $reviews: String!) {
+  mine: search(query: $mine, type: ISSUE, first: 100) {
+    nodes { ... on PullRequest {
+      number title url isDraft createdAt mergeable reviewDecision
+      repository { name }
+      commits(last: 1) { nodes { commit { statusCheckRollup { state } } } }
+    } }
+  }
+  reviews: search(query: $reviews, type: ISSUE, first: 100) {
+    nodes { ... on PullRequest {
+      number title url isDraft createdAt mergeable
+      repository { name }
+      author { login }
+    } }
+  }
+}
+EOF
+
+read -r -d '' JQ <<'EOF' || true
+def pad($n): (. // "") | . + (" " * ([$n - length, 0] | max) // "");
+def cell($n): (. // "") | (if length > $n then .[0:$n - 1] + "~" else . end) | pad($n);
+def paint($c): "\u001b[\($c)m\(.)\u001b[0m";
+def age: (now - fromdateiso8601) as $s
+  | if $s < 3600 then "\(($s / 60) | floor)m"
+    elif $s < 86400 then "\(($s / 3600) | floor)h"
+    elif $s < 604800 then "\(($s / 86400) | floor)d"
+    else "\(($s / 604800) | floor)w" end;
+def ci_mark:
+  if . == "SUCCESS" then ("+ok" | pad($ci) | paint(32))
+  elif . == "FAILURE" or . == "ERROR" then ("!ci" | pad($ci) | paint(31))
+  elif . == "PENDING" then ("~ci" | pad($ci) | paint(33))
+  else ("." | pad($ci) | paint(90)) end;
+def dec_mark:
+  if . == "APPROVED" then ("+approved" | pad($dec) | paint(32))
+  elif . == "CHANGES_REQUESTED" then ("!changes" | pad($dec) | paint(31))
+  elif . == "REVIEW_REQUIRED" then ("~review" | pad($dec) | paint(90))
+  else ("." | pad($dec) | paint(90)) end;
+def flags:
+  [ (if .isDraft then ("draft" | paint(90)) else empty end),
+    (if .mergeable == "CONFLICTING" then ("CONFLICT" | paint(31)) else empty end)
+  ] | join(" ");
+
+( .data.mine.nodes[]
+  | .repository.name as $r
+  | [ "PR", ($dirs[$r] // ""), .url,
+      ( ("PR" | pad(4) | paint(35)) + " "
+        + ($r | cell($repo)) + " "
+        + ("#\(.number)" | pad($num) | paint(90)) + " "
+        + ((.commits.nodes[0].commit.statusCheckRollup.state // "") | ci_mark) + " "
+        + ((.reviewDecision // "") | dec_mark) + " "
+        + (.createdAt | age | pad($agew) | paint(90)) + " "
+        + .title + " " + flags )
+    ] | @tsv
+),
+( .data.reviews.nodes[]
+  | .repository.name as $r
+  | [ "REV", ($dirs[$r] // ""), .url,
+      ( ("REV" | pad(4) | paint(33)) + " "
+        + ($r | cell($repo)) + " "
+        + ("#\(.number)" | pad($num) | paint(90)) + " "
+        + ((.author.login // "?") | cell($ci + $dec + 1) | paint(36)) + " "
+        + (.createdAt | age | pad($agew) | paint(90)) + " "
+        + .title + " " + flags )
+    ] | @tsv
+)
+EOF
+
+# PR and REV rows: one GraphQL call, scoped to exactly the repos on disk so a
+# PR in a repo you have not checked out here never shows up.
+remote_rows() {
+  local scope="" dirs="{}" dir nwo
+  while IFS=$'\t' read -r dir nwo; do
+    scope+=" repo:$nwo"
+    dirs=$(jq -c --arg n "${nwo##*/}" --arg d "$dir" '. + {($n): $d}' <<<"$dirs")
+  done
+
+  gh api graphql -f query="$GQL" \
+    -f mine="is:pr is:open author:@me$scope" \
+    -f reviews="is:pr is:open review-requested:@me$scope" |
+    jq -r --argjson dirs "$dirs" \
+      --argjson repo "$W_REPO" --argjson num "$W_NUM" --argjson ci "$W_CI" \
+      --argjson dec "$W_DEC" --argjson agew "$W_AGE" "$JQ"
+}
+
+# All rows as "<type>\t<dir>\t<url>\t<display>". Also the ctrl-r reload target,
+# which is why it is a mode rather than a plain function call.
+#
+# PR state comes back live, but the fetch it kicks off lands after these rows
+# are built, so drift counts are always one refresh behind.
+emit_rows() {
+  local root=$1 list
+  list=$(repos "$root")
+  background_fetch <<<"$list"
+  remote_rows <<<"$list"
+  local_rows <<<"$list"
+}
+
+case ${1-} in
+  --rows)
+    emit_rows "${2:?--rows needs a root directory}"
+    exit 0
+    ;;
+  --open)
+    exec "${BROWSER:-xdg-open}" "${2:?--open needs a url}"
+    ;;
+  --tab)
+    exec herdr tab create --cwd "${2:?--tab needs a directory}" \
+      --label "$(basename "$2")" --focus
+    ;;
+esac
+
+ROOT=$(cd "${1:-$PWD}" && pwd)
+SELF=$(realpath "$0")
+
+emit_rows "$ROOT" | fzf \
+  --ansi \
+  --delimiter=$'\t' \
+  --with-nth=4.. \
+  --no-sort \
+  --reverse \
+  --border \
+  --prompt='repo-status > ' \
+  --header='enter: open on github  |  ctrl-o: repo in new tab  |  ctrl-r: refresh' \
+  --bind "enter:execute-silent($SELF --open {3})" \
+  --bind "ctrl-o:execute-silent($SELF --tab {2})+abort" \
+  --bind "ctrl-r:reload($SELF --rows $ROOT)"
