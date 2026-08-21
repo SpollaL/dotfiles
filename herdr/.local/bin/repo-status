@@ -2,7 +2,9 @@
 # Interactive git + GitHub dashboard for a tree of sibling repositories.
 #
 # Rows are your open PRs, PRs awaiting your review, and the repos themselves.
-# Enter opens a row on github.com, ctrl-o opens its repo in a new herdr tab.
+# Enter opens a row on github.com, ctrl-o opens its repo in a new herdr tab,
+# ctrl-u fast-forwards that repo's checked-out branch — which is the local
+# branch, not the row's PR branch, on every row type.
 # Scope is whatever is checked out under ROOT, so PRs in repos you do not have
 # locally stay out of the way.
 set -euo pipefail
@@ -191,6 +193,19 @@ case ${1-} in
     exec herdr tab create --cwd "${2:?--tab needs a directory}" \
       --label "$(basename "$2")" --focus
     ;;
+  --pull)
+    # Fast-forward only. A diverged branch or a dirty tree needs a decision
+    # that a single keystroke in a picker should not be making, so let git
+    # refuse and show why rather than reaching for pull or a rebase.
+    dir=${2:?--pull needs a directory}
+    if out=$(git -C "$dir" fetch --quiet 2>&1 &&
+      git -C "$dir" merge --ff-only '@{upstream}' 2>&1); then
+      exit 0
+    fi
+    printf '%s: %s\n' "$(basename "$dir")" "$out" >&2
+    read -rsn1 -p 'press any key' || true
+    exit 0
+    ;;
 esac
 
 ROOT=$(cd "${1:-$PWD}" && pwd)
@@ -200,7 +215,7 @@ SELF=$(realpath "$0")
 # widths the rows use. The titles describe PR and REV rows; a REPO row spends
 # the PR#/CI/REVIEW span on its branch and the AGE/TITLE span on tree and drift.
 read -r -d '' HEADER <<EOF || true
-enter open on GitHub    ctrl-o repo in new tab    ctrl-r refresh
+enter open on GitHub    ctrl-u fast-forward    ctrl-o repo in new tab    ctrl-r refresh
 PR your pull request    REV waiting on your review    REPO local checkout
 $(printf '%-4s %-*s %-*s %-*s %-*s %-*s %s' \
   TYPE "$W_REPO" REPO "$W_NUM" PR# "$W_CI" CI "$W_DEC" REVIEW "$W_AGE" AGE \
@@ -218,4 +233,5 @@ emit_rows "$ROOT" | fzf \
   --header="$HEADER" \
   --bind "enter:execute-silent($SELF --open {3})" \
   --bind "ctrl-o:execute-silent($SELF --tab {2})+abort" \
+  --bind "ctrl-u:execute($SELF --pull {2})+reload($SELF --rows $ROOT)" \
   --bind "ctrl-r:reload($SELF --rows $ROOT)"
