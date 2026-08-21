@@ -11,7 +11,7 @@ export PATH="$HOME/.fzf/bin:$HOME/.local/bin:$PATH"
 
 # Column widths, shared by the bash and jq row builders so the three row types
 # line up in the picker.
-W_REPO=28 W_NUM=6 W_CI=6 W_DEC=11 W_AGE=4
+W_REPO=28 W_NUM=6 W_CI=6 W_DEC=11 W_AGE=4 W_STATE=9
 
 # Fixed-width cell. Long branch and repo names are common enough that letting
 # one overflow would shift every column to its right.
@@ -57,16 +57,17 @@ local_rows() {
     dirty=$(git -C "$dir" status --porcelain | wc -l)
 
     if [[ $dirty -gt 0 ]]; then
-      state=$(printf '\033[33m%-6s\033[0m' "*$dirty")
+      state=$(printf '\033[33m%s\033[0m' "$(cell "$dirty dirty" "$W_STATE")")
     else
-      state=$(printf '\033[90m%-6s\033[0m' clean)
+      state=$(printf '\033[90m%s\033[0m' "$(cell clean "$W_STATE")")
     fi
 
     drift=""
     if counts=$(git -C "$dir" rev-list --left-right --count '@{upstream}...HEAD' 2>/dev/null); then
       read -r behind ahead <<<"$counts"
-      [[ $ahead -gt 0 ]] && drift+=$(printf '\033[32m^%s\033[0m ' "$ahead")
-      [[ $behind -gt 0 ]] && drift+=$(printf '\033[31mv%s\033[0m' "$behind")
+      [[ $ahead -gt 0 ]] && drift+=$(printf '\033[32m%s ahead\033[0m ' "$ahead")
+      [[ $behind -gt 0 ]] && drift+=$(printf '\033[31m%s behind\033[0m' "$behind")
+      [[ -n $drift ]] || drift=$(printf '\033[90min sync\033[0m')
     else
       drift=$(printf '\033[90mno upstream\033[0m')
     fi
@@ -109,15 +110,15 @@ def age: (now - fromdateiso8601) as $s
     elif $s < 604800 then "\(($s / 86400) | floor)d"
     else "\(($s / 604800) | floor)w" end;
 def ci_mark:
-  if . == "SUCCESS" then ("+ok" | pad($ci) | paint(32))
-  elif . == "FAILURE" or . == "ERROR" then ("!ci" | pad($ci) | paint(31))
-  elif . == "PENDING" then ("~ci" | pad($ci) | paint(33))
-  else ("." | pad($ci) | paint(90)) end;
+  if . == "SUCCESS" then ("pass" | pad($ci) | paint(32))
+  elif . == "FAILURE" or . == "ERROR" then ("FAIL" | pad($ci) | paint(31))
+  elif . == "PENDING" then ("run" | pad($ci) | paint(33))
+  else ("no ci" | pad($ci) | paint(90)) end;
 def dec_mark:
-  if . == "APPROVED" then ("+approved" | pad($dec) | paint(32))
-  elif . == "CHANGES_REQUESTED" then ("!changes" | pad($dec) | paint(31))
-  elif . == "REVIEW_REQUIRED" then ("~review" | pad($dec) | paint(90))
-  else ("." | pad($dec) | paint(90)) end;
+  if . == "APPROVED" then ("approved" | pad($dec) | paint(32))
+  elif . == "CHANGES_REQUESTED" then ("CHANGES" | pad($dec) | paint(31))
+  elif . == "REVIEW_REQUIRED" then ("pending" | pad($dec) | paint(90))
+  else ("no review" | pad($dec) | paint(90)) end;
 def flags:
   [ (if .isDraft then ("draft" | paint(90)) else empty end),
     (if .mergeable == "CONFLICTING" then ("CONFLICT" | paint(31)) else empty end)
@@ -195,6 +196,17 @@ esac
 ROOT=$(cd "${1:-$PWD}" && pwd)
 SELF=$(realpath "$0")
 
+# Keys, what each row type means, and column titles positioned with the same
+# widths the rows use. The titles describe PR and REV rows; a REPO row spends
+# the PR#/CI/REVIEW span on its branch and the AGE/TITLE span on tree and drift.
+read -r -d '' HEADER <<EOF || true
+enter open on GitHub    ctrl-o repo in new tab    ctrl-r refresh
+PR your pull request    REV waiting on your review    REPO local checkout
+$(printf '%-4s %-*s %-*s %-*s %-*s %-*s %s' \
+  TYPE "$W_REPO" REPO "$W_NUM" PR# "$W_CI" CI "$W_DEC" REVIEW "$W_AGE" AGE \
+  'TITLE          (REPO: branch, working tree, drift)')
+EOF
+
 emit_rows "$ROOT" | fzf \
   --ansi \
   --delimiter=$'\t' \
@@ -203,7 +215,7 @@ emit_rows "$ROOT" | fzf \
   --reverse \
   --border \
   --prompt='repo-status > ' \
-  --header='enter: open on github  |  ctrl-o: repo in new tab  |  ctrl-r: refresh' \
+  --header="$HEADER" \
   --bind "enter:execute-silent($SELF --open {3})" \
   --bind "ctrl-o:execute-silent($SELF --tab {2})+abort" \
   --bind "ctrl-r:reload($SELF --rows $ROOT)"
