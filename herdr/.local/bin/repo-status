@@ -14,7 +14,7 @@ export PATH="$HOME/.fzf/bin:$HOME/.local/bin:$PATH"
 
 # Column widths, shared by the bash and jq row builders so the three row types
 # line up in the picker.
-W_REPO=28 W_NUM=6 W_CI=6 W_DEC=11 W_AGE=4 W_STATE=9 W_WHO=20
+W_REPO=28 W_NUM=6 W_CI=6 W_DEC=14 W_AGE=4 W_STATE=9 W_WHO=20
 
 # Fixed-width cell. Long branch and repo names are common enough that letting
 # one overflow would shift every column to its right.
@@ -122,21 +122,25 @@ def ci_mark:
   elif . == "FAILURE" or . == "ERROR" then ("FAIL" | pad($ci) | paint(31))
   elif . == "PENDING" then ("run" | pad($ci) | paint(33))
   else ("no ci" | pad($ci) | paint(90)) end;
-# REVIEW column on a PR row: where the PR as a whole stands.
+# REVIEW column on a PR row: where the PR as a whole stands. Copilot only leaves
+# COMMENTED reviews and those never move reviewDecision, so a PR nothing but the
+# bot has read still lands in the pending branch. REVIEW_REQUIRED and a null
+# decision say the same thing here — no human verdict yet — so they share a label.
 def dec_mark:
   if . == "APPROVED" then ("approved" | pad($dec) | paint(32))
   elif . == "CHANGES_REQUESTED" then ("CHANGES" | pad($dec) | paint(31))
-  elif . == "REVIEW_REQUIRED" then ("pending" | pad($dec) | paint(90))
-  else ("no review" | pad($dec) | paint(90)) end;
+  else ("pending review" | pad($dec) | paint(90)) end;
 # REVIEW column on a REV row: where *you* stand. GitHub drops the review request
 # the moment you submit, so anything past "requested" would otherwise vanish from
 # the board while the PR is still open and still yours to follow.
+# Only your own reviews reach this; a PR Copilot alone has been over falls to
+# PENDING, which is yellow like "requested" because both mean you still owe it.
 def my_mark:
   if . == "REQUESTED" then ("requested" | pad($dec) | paint(93))
   elif . == "APPROVED" then ("approved" | pad($dec) | paint(32))
   elif . == "CHANGES_REQUESTED" then ("CHANGES" | pad($dec) | paint(31))
   elif . == "COMMENTED" then ("commented" | pad($dec) | paint(36))
-  else ("reviewed" | pad($dec) | paint(90)) end;
+  else ("pending review" | pad($dec) | paint(93)) end;
 def flags:
   [ (if .isDraft then ("draft" | paint(90)) else empty end),
     (if .mergeable == "CONFLICTING" then ("CONFLICT" | paint(31)) else empty end)
@@ -171,9 +175,11 @@ def rev_row($state):
       ] | @tsv
   ),
   ( $d.requested.nodes[] | rev_row("REQUESTED") ),
+  # Your own PRs land in reviewed-by:@me as soon as you comment on one, but they
+  # are already PR rows above, so REV stays other people's work.
   ( $d.reviewed.nodes[]
-    | select($pending[key] | not)
-    | rev_row([.latestReviews.nodes[]? | select(.author.login == $me) | .state] | first // "REVIEWED")
+    | select(.author.login != $me and ($pending[key] | not))
+    | rev_row([.latestReviews.nodes[]? | select(.author.login == $me) | .state] | first // "PENDING")
   )
 )
 EOF
