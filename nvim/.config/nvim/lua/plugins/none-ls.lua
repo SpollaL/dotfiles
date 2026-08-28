@@ -38,6 +38,15 @@ return {
         factory = helpers.formatter_factory,
       })
     end
+
+    -- Upstream bug: none-ls's async command cache is keyed at closure-creation
+    -- time (helpers/cache.lua:52) but `rpc.terminate` wipes the whole cache, so
+    -- prettier's node_modules resolver throws on every markdown buffer. Dropping
+    -- the resolver falls back to `prettier` on $PATH -- what it resolved to here
+    -- anyway. Revert once nvimtools/none-ls.nvim guards the async variants.
+    local prettier = null_ls.builtins.formatting.prettier
+    prettier._opts.dynamic_command = nil
+
     null_ls.setup({
       sources = {
         null_ls.builtins.formatting.stylua,
@@ -57,7 +66,7 @@ return {
         null_ls.builtins.formatting.goimports,
         null_ls.builtins.formatting.golines,
         null_ls.builtins.diagnostics.hadolint,
-        null_ls.builtins.formatting.prettier,
+        prettier,
         null_ls.builtins.diagnostics.kube_linter,
       },
     })
