@@ -94,10 +94,7 @@ query($mine: String!, $requested: String!, $reviewed: String!) {
     nodes { ... on PullRequest { ...prBits } }
   }
   reviewed: search(query: $reviewed, type: ISSUE, first: 100) {
-    nodes { ... on PullRequest {
-      ...prBits
-      latestReviews(first: 20) { nodes { author { login } state } }
-    } }
+    nodes { ... on PullRequest { ...prBits } }
   }
 }
 fragment prBits on PullRequest {
@@ -105,6 +102,13 @@ fragment prBits on PullRequest {
   repository { name }
   author { login }
   commits(last: 1) { nodes { commit { statusCheckRollup { state } } } }
+  latestReviews(first: 20) { nodes { author { login __typename } state } }
+  # A review left as a plain conversation comment is not a Review: it reaches
+  # neither latestReviews nor reviewed-by:@me, and search's commenter:
+  # qualifier does not find it either, so the comment list is the only
+  # evidence it exists.
+  # ponytail: last 50 comments; raise it if a thread ever buries your own.
+  comments(last: 50) { nodes { author { login __typename } } }
 }
 EOF
 
@@ -129,12 +133,14 @@ def ci_mark:
 def dec_mark:
   if . == "APPROVED" then ("approved" | pad($dec) | paint(32))
   elif . == "CHANGES_REQUESTED" then ("CHANGES" | pad($dec) | paint(31))
+  elif . == "COMMENTED" then ("commented" | pad($dec) | paint(36))
   else ("pending review" | pad($dec) | paint(90)) end;
 # REVIEW column on a REV row: where *you* stand. GitHub drops the review request
 # the moment you submit, so anything past "requested" would otherwise vanish from
 # the board while the PR is still open and still yours to follow.
-# Only your own reviews reach this; a PR Copilot alone has been over falls to
-# PENDING, which is yellow like "requested" because both mean you still owe it.
+# Only your own reviews and comments reach this; a PR Copilot alone has been
+# over falls to PENDING, which is yellow like "requested" because both mean you
+# still owe it.
 def my_mark:
   if . == "REQUESTED" then ("requested" | pad($dec) | paint(93))
   elif . == "APPROVED" then ("approved" | pad($dec) | paint(32))
@@ -162,24 +168,43 @@ def rev_row($state):
 .data as $d
 | $d.viewer.login as $me
 | ([$d.requested.nodes[] | key] | map({(.): true}) | add // {}) as $pending
-| (
+# Your standing on a PR: your own latest review, then a plain conversation
+# comment from you, then $default. Without the comment step a PR you have
+# written a full review into by hand still reads as untouched.
+# Where your own PR stands. reviewDecision only ever reports approved, changes
+# requested, or nothing, so someone working through your PR in comments is
+# invisible in it — and that is most of the life of a PR under review. Bots are
+# excluded: Copilot reviews every PR the moment it opens, which would mark every
+# row commented and tell you nothing.
+| def pr_state:
+    (.reviewDecision // "") as $decision
+    | if $decision == "APPROVED" or $decision == "CHANGES_REQUESTED" then $decision
+      elif any((.latestReviews.nodes[]?, .comments.nodes[]?);
+               .author.__typename != "Bot" and .author.login != $me)
+      then "COMMENTED"
+      else $decision end;
+  def my_state($default):
+    ([.latestReviews.nodes[]? | select(.author.login == $me) | .state] | first) as $verdict
+    | $verdict // (if any(.comments.nodes[]?; .author.login == $me)
+                   then "COMMENTED" else $default end);
+  (
   ( $d.mine.nodes[]
     | [ "PR", ($dirs[.repository.name] // ""), .url,
         ( ("PR" | pad(4) | paint(35)) + " "
           + (.repository.name | cell($repo)) + " "
           + ("#\(.number)" | pad($num) | paint(90)) + " "
           + ci_cell + " "
-          + ((.reviewDecision // "") | dec_mark) + " "
+          + (pr_state | dec_mark) + " "
           + (.createdAt | age | pad($agew) | paint(90)) + " "
           + .title + " " + flags )
       ] | @tsv
   ),
-  ( $d.requested.nodes[] | rev_row("REQUESTED") ),
+  ( $d.requested.nodes[] | rev_row(my_state("REQUESTED")) ),
   # Your own PRs land in reviewed-by:@me as soon as you comment on one, but they
   # are already PR rows above, so REV stays other people's work.
   ( $d.reviewed.nodes[]
     | select(.author.login != $me and ($pending[key] | not))
-    | rev_row([.latestReviews.nodes[]? | select(.author.login == $me) | .state] | first // "PENDING")
+    | rev_row(my_state("PENDING"))
   )
 )
 EOF
@@ -226,6 +251,55 @@ case ${1-} in
   --tab)
     exec herdr tab create --cwd "${2:?--tab needs a directory}" \
       --label "$(basename "$2")" --focus
+    ;;
+  --selftest)
+    # The REVIEW cell is a ladder on both row types — on a REV row your own
+    # review, then a plain comment from you; on a PR row the decision, then any
+    # human comment — and it has been wrong in both directions before. One
+    # fixture through the real jq program.
+    read -r -d '' FIXTURE <<'JSON' || true
+{ "data": { "viewer": { "login": "me" }, "reviewed": { "nodes": [] },
+  "mine": { "nodes": [
+    { "number": 4, "reviewDecision": "APPROVED", "author": { "login": "me" },
+      "latestReviews": { "nodes": [] }, "comments": { "nodes": [] },
+      "title": "a verdict outranks any comment" },
+    { "number": 5, "reviewDecision": "REVIEW_REQUIRED", "author": { "login": "me" },
+      "latestReviews": { "nodes": [] },
+      "comments": { "nodes": [{ "author": { "login": "them", "__typename": "User" } }] },
+      "title": "a human comment shows on your own PR" },
+    { "number": 6, "reviewDecision": "REVIEW_REQUIRED", "author": { "login": "me" },
+      "latestReviews": { "nodes": [{ "author": { "login": "bot", "__typename": "Bot" }, "state": "COMMENTED" }] },
+      "comments": { "nodes": [{ "author": { "login": "me", "__typename": "User" } }] },
+      "title": "a bot, or you alone, does not" } ] },
+  "requested": { "nodes": [
+    { "number": 1, "latestReviews": { "nodes": [{ "author": { "login": "me" }, "state": "APPROVED" }] },
+      "comments": { "nodes": [] }, "title": "my own review wins" },
+    { "number": 2, "latestReviews": { "nodes": [{ "author": { "login": "bot" }, "state": "COMMENTED" }] },
+      "comments": { "nodes": [{ "author": { "login": "me" } }] }, "title": "a plain comment counts" },
+    { "number": 3, "latestReviews": { "nodes": [] },
+      "comments": { "nodes": [{ "author": { "login": "other" } }] }, "title": "someone else commenting does not" } ] } } }
+JSON
+    got=$(jq 'def fill: { url: "u", isDraft: false, createdAt: "2020-01-01T00:00:00Z",
+          mergeable: "MERGEABLE", repository: { name: "r" },
+          author: { login: "other" }, commits: { nodes: [] } } + .;
+        .data.mine.nodes[] |= fill | .data.requested.nodes[] |= fill' <<<"$FIXTURE" |
+      jq -r --argjson dirs '{}' --argjson repo "$W_REPO" --argjson num "$W_NUM" \
+        --argjson ci "$W_CI" --argjson dec "$W_DEC" --argjson agew "$W_AGE" \
+        --argjson who "$W_WHO" "$JQ" |
+      sed -e 's/\x1b\[[0-9;]*m//g' -e 's/  */ /g')
+    rc=0
+    while read -r want; do
+      grep -qF "$want" <<<"$got" || { printf 'selftest: no row reads "%s"\n' "$want" >&2; rc=1; }
+    done <<'CASES'
+#1 no ci approved
+#2 no ci commented
+#3 no ci requested
+#4 no ci approved
+#5 no ci commented
+#6 no ci pending review
+CASES
+    ((rc == 0)) && echo 'selftest: ok'
+    exit $rc
     ;;
   --pull)
     # Fast-forward only. A diverged branch or a dirty tree needs a decision
